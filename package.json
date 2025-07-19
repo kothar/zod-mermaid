@@ -38,6 +38,9 @@
     "url": "https://github.com/kothar/zod-mermaid/issues"
   },
   "homepage": "https://github.com/kothar/zod-mermaid#readme",
+  "dependencies": {
+    "zod": "^4.0.5"
+  },
   "devDependencies": {
     "@types/jest": "^30.0.0",
     "@types/node": "^24.0.0",
@@ -53,9 +56,6 @@
     "rimraf": "^6.0.0",
     "ts-jest": "^29.4.0",
     "typescript": "^5.2.2"
-  },
-  "dependencies": {
-    "zod": "^4.0.5"
   },
   "engines": {
     "node": ">=18.0.0"
