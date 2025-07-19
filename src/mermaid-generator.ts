@@ -1,7 +1,7 @@
 import type { z } from 'zod';
 
 import type { MermaidOptions, SchemaEntity } from './mermaid-types';
-import { SchemaParseError, DiagramGenerationError } from './errors';
+import { DiagramGenerationError, SchemaParseError, ZodMermaidError } from './errors';
 
 /**
  * Default options for Mermaid diagram generation
@@ -25,10 +25,7 @@ const DEFAULT_OPTIONS: Required<MermaidOptions> = {
  * @throws {SchemaParseError} When schema parsing fails
  * @throws {DiagramGenerationError} When diagram generation fails
  */
-export function generateMermaidDiagram(
-  schema: z.ZodTypeAny,
-  options: MermaidOptions = {},
-): string {
+export function generateMermaidDiagram(schema: z.ZodTypeAny, options: MermaidOptions = {}): string {
   try {
     const mergedOptions = { ...DEFAULT_OPTIONS, ...options };
     const entities = parseSchemaToEntities(schema, mergedOptions);
@@ -547,6 +544,3 @@ function generateFlowchartDiagram(entities: SchemaEntity[]): string {
 
   return lines.join('\n');
 }
-
-// Import the base error class for type checking
-import { ZodMermaidError } from './errors';
