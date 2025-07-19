@@ -1,0 +1,195 @@
+# Cursor Rules for Zod Mermaid TypeScript Library
+
+## Project Overview
+This is a TypeScript library for working with Zod schemas and Mermaid diagrams. The project follows strict coding standards and comprehensive type safety.
+
+## Code Standards
+
+### TypeScript
+- Use strict TypeScript configuration with all strict flags enabled
+- Provide explicit return types for public API functions and complex return types
+- Allow inferred types for simple internal utilities and obvious return types
+- Use proper type imports: `import type { ... } from '...'`
+- Prefer interfaces over type aliases for object shapes
+- Use readonly properties where appropriate
+- Avoid `any` type - use proper typing or `unknown`
+- Use union types and discriminated unions for complex types
+
+### Naming Conventions
+- **Interfaces**: PascalCase (e.g., `MermaidOptions`)
+- **Types**: PascalCase (e.g., `DiagramType`)
+- **Enums**: PascalCase (e.g., `ValidationLevel`)
+- **Enum members**: UPPER_CASE (e.g., `ERROR`, `WARNING`)
+- **Functions**: camelCase (e.g., `generateMermaidDiagram`)
+- **Variables**: camelCase (e.g., `defaultOptions`)
+- **Constants**: UPPER_CASE (e.g., `DEFAULT_OPTIONS`)
+- **Files**: kebab-case (e.g., `mermaid-generator.ts`)
+
+### Import Organization
+1. Built-in Node.js modules
+2. External dependencies (alphabetical)
+3. Internal modules (alphabetical)
+4. Type imports (alphabetical)
+5. Relative imports (alphabetical)
+
+Example:
+```typescript
+import { readFileSync } from 'fs';
+import { join } from 'path';
+
+import { z } from 'zod';
+
+import type { MermaidOptions } from '../types/mermaid-types';
+import { SchemaParseError } from '../utils/errors';
+```
+
+### Error Handling
+- Use custom error classes extending `ZodMermaidError`
+- Provide meaningful error messages with context
+- Include relevant data in error constructors
+- Use proper error types for different scenarios
+
+### Documentation
+- Use JSDoc comments for all public functions and classes
+- Include parameter types, return types, and examples
+- Document exceptions that may be thrown
+- Use `@module` for module-level documentation
+
+### Testing
+- Write comprehensive unit tests with Jest
+- Use descriptive test names and nested describe blocks
+- Test both success and error cases
+- Mock external dependencies appropriately
+- Maintain 80%+ code coverage
+
+### Code Style
+- Use single quotes for strings
+- Use semicolons at the end of statements
+- Use 2 spaces for indentation
+- Maximum line length: 100 characters
+- Use trailing commas in multiline objects/arrays
+- Prefer arrow functions for callbacks
+- Use object shorthand notation
+- Use template literals over string concatenation
+
+### Performance
+- Avoid unnecessary object creation
+- Use proper data structures for the task
+- Consider memory usage for large schemas
+- Cache expensive computations where appropriate
+
+### Security
+- Validate all inputs
+- Sanitize user-provided content
+- Avoid eval() and similar dangerous functions
+- Use proper error boundaries
+
+## File Structure
+```
+src/
+├── index.ts              # Main exports
+├── types/                # Type definitions
+├── utils/                # Utility functions
+├── generators/           # Diagram generators
+└── test/                # Test utilities
+```
+
+## Common Patterns
+
+### Function Signatures
+
+#### Public API Functions (Explicit Return Types)
+```typescript
+export function generateMermaidDiagram(
+  schema: z.ZodTypeAny,
+  options: MermaidOptions = {},
+): string {
+  // Implementation
+}
+```
+
+#### Internal Utilities (Inferred Types)
+```typescript
+function parseSchemaToEntities(schema: z.ZodTypeAny) {
+  return []; // TypeScript infers SchemaEntity[]
+}
+```
+
+#### Complex Return Types (Always Explicit)
+```typescript
+function processSchema(schema: z.ZodTypeAny): Promise<Result<string, Error>> {
+  // Implementation
+}
+```
+
+### Error Classes
+```typescript
+export class CustomError extends ZodMermaidError {
+  public constructor(message: string, public readonly context?: unknown) {
+    super(message);
+    this.name = 'CustomError';
+  }
+}
+```
+
+### Type Guards
+```typescript
+export function isValidSchema(value: unknown): value is z.ZodTypeAny {
+  return value !== null && typeof value === 'object' && 'parse' in value;
+}
+```
+
+### Constants
+```typescript
+const DEFAULT_OPTIONS: Required<OptionsType> = {
+  option1: 'default',
+  option2: true,
+} as const;
+```
+
+## Linting Rules
+- ESLint with TypeScript support
+- Prettier for code formatting
+- Import ordering and organization
+- No unused variables or imports
+- No console.log in production code
+- Proper error handling
+- Explicit return types for public APIs (warn, not error)
+- Allow inferred types for internal utilities
+
+## Testing Standards
+- Use Jest as the testing framework
+- Write tests for all public APIs
+- Use descriptive test names
+- Group related tests with describe blocks
+- Mock external dependencies
+- Test error conditions
+- Maintain high coverage
+
+## Git Workflow
+- Use conventional commit messages
+- Create feature branches for new work
+- Ensure all tests pass before merging
+- Run linting and formatting checks
+- Update documentation as needed
+
+## Performance Guidelines
+- Profile code for bottlenecks
+- Use appropriate data structures
+- Consider memory usage
+- Cache expensive operations
+- Optimize for common use cases
+
+## Type Safety Guidelines
+- Use explicit return types for public API functions to provide clear contracts
+- Allow inferred types for simple internal utilities to reduce verbosity
+- Use explicit types for complex return types (unions, generics, etc.)
+- Consider the audience - library APIs benefit more from explicit types
+- Balance clarity with maintainability based on function scope and complexity
+
+## Security Considerations
+- Validate all inputs
+- Sanitize user content
+- Avoid code injection
+- Use proper error handling
+- Follow principle of least privilege 
