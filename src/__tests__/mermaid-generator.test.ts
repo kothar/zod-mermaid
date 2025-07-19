@@ -7,7 +7,7 @@ describe('generateMermaidDiagram', () => {
   const mockSchema = z.object({
     id: z.string(),
     name: z.string(),
-    email: z.string().email(),
+    email: z.email(),
     age: z.number().min(0).max(120),
   });
 

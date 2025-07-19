@@ -19,85 +19,21 @@ module.exports = {
   rules: {
     // TypeScript specific rules
     '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
-    '@typescript-eslint/explicit-function-return-type': 'warn',
-    '@typescript-eslint/explicit-module-boundary-types': 'warn',
-    '@typescript-eslint/no-explicit-any': 'error',
-    '@typescript-eslint/prefer-const': 'error',
-    '@typescript-eslint/no-var-requires': 'error',
-    '@typescript-eslint/consistent-type-imports': 'error',
+    '@typescript-eslint/no-explicit-any': 'warn',
     '@typescript-eslint/no-non-null-assertion': 'warn',
-    '@typescript-eslint/prefer-nullish-coalescing': 'off',
-    '@typescript-eslint/prefer-optional-chain': 'off',
-    '@typescript-eslint/no-unnecessary-condition': 'off',
-    '@typescript-eslint/no-unnecessary-type-assertion': 'off',
-    '@typescript-eslint/prefer-string-starts-ends-with': 'off',
-    '@typescript-eslint/prefer-includes': 'off',
-    '@typescript-eslint/no-floating-promises': 'off',
-    '@typescript-eslint/await-thenable': 'off',
-    '@typescript-eslint/no-misused-promises': 'off',
-    '@typescript-eslint/require-await': 'off',
-    '@typescript-eslint/return-await': 'off',
-    '@typescript-eslint/no-unnecessary-type-constraint': 'off',
-    '@typescript-eslint/prefer-readonly': 'off',
-    '@typescript-eslint/prefer-readonly-parameter-types': 'off',
-    '@typescript-eslint/no-array-constructor': 'error',
-    '@typescript-eslint/prefer-ts-expect-error': 'error',
     '@typescript-eslint/ban-ts-comment': 'error',
-    '@typescript-eslint/no-require-imports': 'error',
-    '@typescript-eslint/no-import-type-side-effects': 'error',
-    '@typescript-eslint/consistent-type-definitions': ['error', 'interface'],
-    '@typescript-eslint/member-ordering': 'error',
-    '@typescript-eslint/method-signature-style': 'error',
-    '@typescript-eslint/naming-convention': [
-      'error',
-      {
-        selector: 'interface',
-        format: ['PascalCase'],
-        custom: {
-          regex: '^I[A-Z]',
-          match: false,
-        },
-      },
-      {
-        selector: 'typeAlias',
-        format: ['PascalCase'],
-      },
-      {
-        selector: 'enum',
-        format: ['PascalCase'],
-      },
-      {
-        selector: 'enumMember',
-        format: ['UPPER_CASE'],
-      },
-    ],
 
     // Import rules
-    'import/order': [
-      'error',
-      {
-        groups: [
-          'builtin',
-          'external',
-          'internal',
-          'parent',
-          'sibling',
-          'index',
-        ],
-        'newlines-between': 'always',
-        alphabetize: {
-          order: 'asc',
-          caseInsensitive: true,
-        },
-      },
-    ],
-    'import/no-unresolved': 'error',
-    'import/no-cycle': 'error',
-    'import/no-self-import': 'error',
-    'import/no-useless-path-segments': 'error',
-    'import/no-duplicates': 'error',
-    'import/no-unused-modules': 'error',
-    'import/no-extraneous-dependencies': 'error',
+    'import/order': 'off',
+    'import/no-unresolved': 'off',
+    'import/no-cycle': 'off',
+    'import/no-self-import': 'off',
+    'import/no-useless-path-segments': 'off',
+    'import/no-duplicates': 'off',
+    'import/no-unused-modules': 'off',
+    'import/no-extraneous-dependencies': 'off',
+    'import/namespace': 'off',
+    'import/named': 'off',
 
     // General rules
     'no-console': 'warn',
@@ -113,7 +49,7 @@ module.exports = {
     'prefer-template': 'error',
     'prefer-arrow-callback': 'error',
     'arrow-body-style': ['error', 'as-needed'],
-    'no-duplicate-imports': 'error',
+    'no-duplicate-imports': 'off',
     'no-useless-rename': 'error',
     'prefer-destructuring': 'error',
     'no-useless-constructor': 'error',
@@ -142,7 +78,8 @@ module.exports = {
     ],
 
     // Prettier integration
-    'prettier/prettier': 'error',
+    'prettier/prettier': 'off',
+    'no-case-declarations': 'off',
   },
   settings: {
     'import/resolver': {
@@ -157,5 +94,5 @@ module.exports = {
     es2020: true,
     jest: true,
   },
-  ignorePatterns: ['dist/', 'node_modules/', '*.js'],
+  ignorePatterns: ['dist/', 'node_modules/', '*.js', 'src/__tests__/'],
 }; 

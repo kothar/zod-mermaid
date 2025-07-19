@@ -1,6 +1,6 @@
 import type { z } from 'zod';
 
-import type { MermaidOptions, DiagramType, SchemaEntity } from './mermaid-types';
+import type { MermaidOptions, SchemaEntity } from './mermaid-types';
 import { SchemaParseError, DiagramGenerationError } from './errors';
 
 /**
@@ -25,7 +25,10 @@ const DEFAULT_OPTIONS: Required<MermaidOptions> = {
  * @throws {SchemaParseError} When schema parsing fails
  * @throws {DiagramGenerationError} When diagram generation fails
  */
-export function generateMermaidDiagram(schema: z.ZodTypeAny, options: MermaidOptions = {}): string {
+export function generateMermaidDiagram(
+  schema: z.ZodTypeAny,
+  options: MermaidOptions = {},
+): string {
   try {
     const mergedOptions = { ...DEFAULT_OPTIONS, ...options };
     const entities = parseSchemaToEntities(schema, mergedOptions);
@@ -34,9 +37,9 @@ export function generateMermaidDiagram(schema: z.ZodTypeAny, options: MermaidOpt
     case 'er':
       return generateERDiagram(entities, mergedOptions);
     case 'class':
-      return generateClassDiagram(entities, mergedOptions);
+      return generateClassDiagram(entities);
     case 'flowchart':
-      return generateFlowchartDiagram(entities, mergedOptions);
+      return generateFlowchartDiagram(entities);
     default:
       throw new DiagramGenerationError(
         `Unsupported diagram type: ${mergedOptions.diagramType}`,
@@ -70,8 +73,8 @@ function parseSchemaToEntities(
 
   // Check if it's an object schema
   if (schema.def.type === 'object') {
-    const objectSchema = schema as z.ZodObject<any>;
-    const {shape} = objectSchema;
+    const objectSchema = schema as z.ZodObject<Record<string, z.ZodTypeAny>>;
+    const { shape } = objectSchema;
     const entityName = getEntityName(schema, options, parentFieldName);
 
     const fields = Object.entries(shape).map(([key, value]) => {
@@ -157,8 +160,27 @@ function getEntityName(
  * @param fieldName - The name of the field (for object types)
  * @returns The field type as a string
  */
-function getFieldType(schema: z.ZodTypeAny, fieldName?: string, entityName?: string): string {
-  const {type} = schema.def;
+/**
+ * Gets the field type from a Zod schema.
+ *
+ * Determines the TypeScript-like type string for a given Zod field, handling primitives,
+ * arrays, objects, enums, records, and wrapped types (optional, nullable, default, lazy).
+ * For object types, returns a reference to the entity name (derived from the field name).
+ * For lazy types, attempts to resolve the underlying schema and handles self-referential types.
+ *
+ * @param schema - The Zod schema for the field
+ * @param fieldName - The name of the field (used for object/entity references)
+ * @param entityName - The name of the parent entity (used for self-referential/lazy types)
+ * @returns The field type as a string (e.g., 'string', 'number[]', 'Entity', etc.)
+ *
+ * @example
+ * getFieldType(z.string(), 'name', 'User') // 'string'
+ * getFieldType(z.array(z.number()), 'scores', 'User') // 'number[]'
+ * getFieldType(z.object({...}), 'profile', 'User') // 'Profile'
+ * getFieldType(z.lazy(() => UserSchema), 'parent', 'User') // 'User'
+ */
+function getFieldType(schema: z.ZodTypeAny, fieldName: string, entityName: string): string {
+  const { type } = schema.def;
 
   switch (type) {
   case 'string':
@@ -169,31 +191,36 @@ function getFieldType(schema: z.ZodTypeAny, fieldName?: string, entityName?: str
     return 'boolean';
   case 'date':
     return 'date';
-  case 'array':
+  case 'array': {
     const arraySchema = schema as z.ZodArray<any>;
     const arrayType = getFieldType(arraySchema.element, fieldName, entityName);
     return `${arrayType}[]`;
+  }
   case 'object':
     // For objects, we'll return a reference to the entity name
     // Note: We don't have access to options here, so we'll use a default approach
     return fieldName ? fieldName.charAt(0).toUpperCase() + fieldName.slice(1) : 'Entity';
   case 'enum':
     return 'string';
-  case 'record':
+  case 'record': {
     const recordDef = schema.def as any;
     const keyType = getFieldType(recordDef.keyType, fieldName, entityName);
     const valueType = getFieldType(recordDef.valueType, fieldName, entityName);
     return `Record<${keyType}, ${valueType}>`;
-  case 'optional':
+  }
+  case 'optional': {
     const optionalSchema = schema as z.ZodOptional<any>;
     return getFieldType(optionalSchema.unwrap(), fieldName, entityName);
-  case 'nullable':
+  }
+  case 'nullable': {
     const nullableSchema = schema as z.ZodNullable<any>;
     return getFieldType(nullableSchema.unwrap(), fieldName, entityName);
-  case 'default':
+  }
+  case 'default': {
     const defaultSchema = schema as z.ZodDefault<any>;
-    return getFieldType(defaultSchema.removeDefault(), fieldName, entityName);
-  case 'lazy':
+    return getFieldType(defaultSchema.unwrap(), fieldName, entityName);
+  }
+  case 'lazy': {
     const lazySchema = schema as z.ZodLazy<any>;
     // For lazy types, we need to resolve the schema to get the actual type
     try {
@@ -209,6 +236,7 @@ function getFieldType(schema: z.ZodTypeAny, fieldName?: string, entityName?: str
       // If we can't resolve the lazy schema, return a generic reference
       return 'Entity';
     }
+  }
   default:
     return 'unknown';
   }
@@ -220,7 +248,7 @@ function getFieldType(schema: z.ZodTypeAny, fieldName?: string, entityName?: str
  * @returns True if the field is optional
  */
 function isFieldOptional(schema: z.ZodTypeAny): boolean {
-  const {type} = schema.def;
+  const { type } = schema.def;
 
   if (type === 'optional') {
     return true;
@@ -251,7 +279,7 @@ function isFieldOptional(schema: z.ZodTypeAny): boolean {
  */
 function getFieldValidation(schema: z.ZodTypeAny): string[] {
   const validations: string[] = [];
-  const {type} = schema.def;
+  const { type } = schema.def;
 
   // Handle wrapped types (optional, nullable, default, lazy)
   if (type === 'optional' || type === 'nullable' || type === 'default' || type === 'lazy') {
@@ -261,7 +289,7 @@ function getFieldValidation(schema: z.ZodTypeAny): string[] {
         : type === 'nullable'
           ? (schema as z.ZodNullable<any>).unwrap()
           : type === 'default'
-            ? (schema as z.ZodDefault<any>).removeDefault()
+            ? (schema as z.ZodDefault<any>).unwrap()
             : (schema as z.ZodLazy<any>).unwrap();
     return getFieldValidation(unwrappedSchema);
   }
@@ -420,7 +448,7 @@ function generateERDiagram(entities: SchemaEntity[], options: Required<MermaidOp
  * @param options - Diagram options
  * @returns Class diagram string
  */
-function generateClassDiagram(entities: SchemaEntity[], options: Required<MermaidOptions>): string {
+function generateClassDiagram(entities: SchemaEntity[]): string {
   const lines: string[] = ['classDiagram'];
 
   // Add class definitions
@@ -477,10 +505,7 @@ function generateClassDiagram(entities: SchemaEntity[], options: Required<Mermai
  * @param options - Diagram options
  * @returns Flowchart string
  */
-function generateFlowchartDiagram(
-  entities: SchemaEntity[],
-  options: Required<MermaidOptions>,
-): string {
+function generateFlowchartDiagram(entities: SchemaEntity[]): string {
   const lines: string[] = ['flowchart TD'];
 
   // Add all entity nodes first

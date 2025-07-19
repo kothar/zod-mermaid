@@ -172,7 +172,7 @@ const UserSchema = z.object({
       notifications: z.boolean().default(true),
     }),
   }),
-});
+}).describe('User');
 ```
 
 ### Product Schema
@@ -185,7 +185,7 @@ const ProductSchema = z.object({
   inStock: z.boolean(),
   tags: z.array(z.string()),
   metadata: z.record(z.string(), z.unknown()),
-});
+}).describe('Product');
 ```
 
 ### Directory Schema
@@ -197,7 +197,7 @@ const DirectorySchema = z.object({
   size: z.number().optional(),
   modifiedAt: z.date(),
   children: z.array(z.lazy(() => DirectorySchema)).optional(),
-});
+}).describe('Directory');
 ```
 
 ## Usage
@@ -208,14 +208,16 @@ To generate your own diagrams:
 import { z } from 'zod';
 import { generateMermaidDiagram } from 'zod-mermaid';
 
+// Use .describe() to provide entity names
 const mySchema = z.object({
   // Your schema definition
-});
+}).describe('MyEntity');
 
 const diagram = generateMermaidDiagram(mySchema, {
   diagramType: 'er', // 'er' | 'class' | 'flowchart'
-  entityName: 'MyEntity', // Custom name for the top-level entity
   includeValidation: true,
   includeOptional: true,
 });
 ```
+
+**Note:** The library automatically uses the schema description (set with `.describe()`) as the entity name. If no description is provided, it will use the `entityName` option or default to 'Schema'.

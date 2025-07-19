@@ -23,7 +23,7 @@ describe('Mermaid Example Generation', () => {
           notifications: z.boolean().default(true),
         }),
       }),
-    });
+    }).describe('User');
 
     const ProductSchema = z.object({
       id: z.string(),
@@ -33,7 +33,7 @@ describe('Mermaid Example Generation', () => {
       inStock: z.boolean(),
       tags: z.array(z.string()),
       metadata: z.record(z.string(), z.unknown()),
-    });
+    }).describe('Product');
 
     // Directory listing with self-referential types
     const DirectorySchema: z.ZodType<any> = z.object({
@@ -43,36 +43,18 @@ describe('Mermaid Example Generation', () => {
       size: z.number().optional(),
       modifiedAt: z.date(),
       children: z.array(z.lazy(() => DirectorySchema)).optional(),
-    });
+    }).describe('Directory');
 
     // Generate different types of diagrams
-    const erDiagram = generateMermaidDiagram(UserSchema, { diagramType: 'er', entityName: 'User' });
-    const classDiagram = generateMermaidDiagram(UserSchema, {
-      diagramType: 'class',
-      entityName: 'User',
-    });
-    const flowchartDiagram = generateMermaidDiagram(UserSchema, {
-      diagramType: 'flowchart',
-      entityName: 'User',
-    });
+    const erDiagram = generateMermaidDiagram(UserSchema, { diagramType: 'er' });
+    const classDiagram = generateMermaidDiagram(UserSchema, { diagramType: 'class' });
+    const flowchartDiagram = generateMermaidDiagram(UserSchema, { diagramType: 'flowchart' });
 
-    const productERDiagram = generateMermaidDiagram(ProductSchema, {
-      diagramType: 'er',
-      entityName: 'Product',
-    });
+    const productERDiagram = generateMermaidDiagram(ProductSchema, { diagramType: 'er' });
 
-    const directoryERDiagram = generateMermaidDiagram(DirectorySchema, {
-      diagramType: 'er',
-      entityName: 'Directory',
-    });
-    const directoryClassDiagram = generateMermaidDiagram(DirectorySchema, {
-      diagramType: 'class',
-      entityName: 'Directory',
-    });
-    const directoryFlowchartDiagram = generateMermaidDiagram(DirectorySchema, {
-      diagramType: 'flowchart',
-      entityName: 'Directory',
-    });
+    const directoryERDiagram = generateMermaidDiagram(DirectorySchema, { diagramType: 'er' });
+    const directoryClassDiagram = generateMermaidDiagram(DirectorySchema, { diagramType: 'class' });
+    const directoryFlowchartDiagram = generateMermaidDiagram(DirectorySchema, { diagramType: 'flowchart' });
 
     // Create markdown content
     const markdownContent = `# Zod Mermaid Examples
@@ -139,7 +121,7 @@ const UserSchema = z.object({
       notifications: z.boolean().default(true),
     }),
   }),
-});
+}).describe('User');
 \`\`\`
 
 ### Product Schema
@@ -152,7 +134,7 @@ const ProductSchema = z.object({
   inStock: z.boolean(),
   tags: z.array(z.string()),
   metadata: z.record(z.string(), z.unknown()),
-});
+}).describe('Product');
 \`\`\`
 
 ### Directory Schema
@@ -164,7 +146,7 @@ const DirectorySchema = z.object({
   size: z.number().optional(),
   modifiedAt: z.date(),
   children: z.array(z.lazy(() => DirectorySchema)).optional(),
-});
+}).describe('Directory');
 \`\`\`
 
 ## Usage
@@ -175,17 +157,19 @@ To generate your own diagrams:
 import { z } from 'zod';
 import { generateMermaidDiagram } from 'zod-mermaid';
 
+// Use .describe() to provide entity names
 const mySchema = z.object({
   // Your schema definition
-});
+}).describe('MyEntity');
 
 const diagram = generateMermaidDiagram(mySchema, {
   diagramType: 'er', // 'er' | 'class' | 'flowchart'
-  entityName: 'MyEntity', // Custom name for the top-level entity
   includeValidation: true,
   includeOptional: true,
 });
 \`\`\`
+
+**Note:** The library automatically uses the schema description (set with \`.describe()\`) as the entity name. If no description is provided, it will use the \`entityName\` option or default to 'Schema'.
 `;
 
     // Save to file

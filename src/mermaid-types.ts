@@ -1,5 +1,3 @@
-import type { z } from 'zod';
-
 /**
  * Supported Mermaid diagram types
  */
@@ -70,8 +68,3 @@ export interface SchemaEntity {
   fields: SchemaField[];
   description?: string | undefined;
 }
-
-/**
- * Zod schema type for internal use
- */
-export type ZodSchema = z.ZodTypeAny;
