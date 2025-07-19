@@ -63,7 +63,7 @@ jobs:
       run: rm -f examples/mermaid-examples.md
 
     - name: Run example generation
-      run: npm test -- src/test/mermaid-example.test.ts
+      run: npm test -- src/__tests__/mermaid-example.test.ts
 
     - name: Check generated examples
       run: |
