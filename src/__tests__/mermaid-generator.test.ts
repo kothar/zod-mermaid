@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import { SchemaParseError, DiagramGenerationError } from '../../utils/errors';
+import { SchemaParseError, DiagramGenerationError } from '../errors';
 import { generateMermaidDiagram } from '../mermaid-generator';
 
 describe('generateMermaidDiagram', () => {
@@ -66,9 +66,9 @@ describe('generateMermaidDiagram', () => {
       }).toThrow(DiagramGenerationError);
     });
 
-        it('should throw SchemaParseError for invalid schemas', () => {
+    it('should throw SchemaParseError for invalid schemas', () => {
       const invalidSchema = null as any;
-      
+
       expect(() => {
         generateMermaidDiagram(invalidSchema);
       }).toThrow(SchemaParseError);

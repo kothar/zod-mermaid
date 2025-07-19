@@ -3,7 +3,7 @@ import { join } from 'path';
 
 import { z } from 'zod';
 
-import { generateMermaidDiagram } from '../generators/mermaid-generator';
+import { generateMermaidDiagram } from '../mermaid-generator';
 
 describe('Mermaid Example Generation', () => {
   it('should generate example diagrams and save to markdown', () => {
@@ -47,14 +47,32 @@ describe('Mermaid Example Generation', () => {
 
     // Generate different types of diagrams
     const erDiagram = generateMermaidDiagram(UserSchema, { diagramType: 'er', entityName: 'User' });
-    const classDiagram = generateMermaidDiagram(UserSchema, { diagramType: 'class', entityName: 'User' });
-    const flowchartDiagram = generateMermaidDiagram(UserSchema, { diagramType: 'flowchart', entityName: 'User' });
+    const classDiagram = generateMermaidDiagram(UserSchema, {
+      diagramType: 'class',
+      entityName: 'User',
+    });
+    const flowchartDiagram = generateMermaidDiagram(UserSchema, {
+      diagramType: 'flowchart',
+      entityName: 'User',
+    });
 
-    const productERDiagram = generateMermaidDiagram(ProductSchema, { diagramType: 'er', entityName: 'Product' });
+    const productERDiagram = generateMermaidDiagram(ProductSchema, {
+      diagramType: 'er',
+      entityName: 'Product',
+    });
 
-    const directoryERDiagram = generateMermaidDiagram(DirectorySchema, { diagramType: 'er', entityName: 'Directory' });
-    const directoryClassDiagram = generateMermaidDiagram(DirectorySchema, { diagramType: 'class', entityName: 'Directory' });
-    const directoryFlowchartDiagram = generateMermaidDiagram(DirectorySchema, { diagramType: 'flowchart', entityName: 'Directory' });
+    const directoryERDiagram = generateMermaidDiagram(DirectorySchema, {
+      diagramType: 'er',
+      entityName: 'Directory',
+    });
+    const directoryClassDiagram = generateMermaidDiagram(DirectorySchema, {
+      diagramType: 'class',
+      entityName: 'Directory',
+    });
+    const directoryFlowchartDiagram = generateMermaidDiagram(DirectorySchema, {
+      diagramType: 'flowchart',
+      entityName: 'Directory',
+    });
 
     // Create markdown content
     const markdownContent = `# Zod Mermaid Examples
