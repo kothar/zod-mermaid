@@ -1,5 +1,5 @@
 /**
- * Zod Mermaid - A TypeScript library for working with Zod schemas and Mermaid diagrams
+ * Zod Mermaid - Generate Mermaid diagrams from Zod schemas
  * @module zod-mermaid
  */
 

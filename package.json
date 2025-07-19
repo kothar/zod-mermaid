@@ -1,7 +1,7 @@
 {
   "name": "zod-mermaid",
   "version": "1.0.0",
-  "description": "A TypeScript library for working with Zod schemas and Mermaid diagrams",
+  "description": "Generate Mermaid diagrams from Zod schemas",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "files": [
@@ -26,10 +26,18 @@
     "zod",
     "mermaid",
     "schema",
-    "validation"
+    "visualization"
   ],
-  "author": "Michael Houston",
+  "author": "Michael Houston (https://kothar.net)",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/kothar/zod-mermaid.git"
+  },
+  "bugs": {
+    "url": "https://github.com/kothar/zod-mermaid/issues"
+  },
+  "homepage": "https://github.com/kothar/zod-mermaid#readme",
   "devDependencies": {
     "@types/jest": "^30.0.0",
     "@types/node": "^24.0.0",
