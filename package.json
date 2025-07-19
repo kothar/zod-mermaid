@@ -1,6 +1,6 @@
 {
   "name": "zod-mermaid",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "A TypeScript library for working with Zod schemas and Mermaid diagrams",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -28,7 +28,7 @@
     "schema",
     "validation"
   ],
-  "author": "",
+  "author": "Michael Houston",
   "license": "MIT",
   "devDependencies": {
     "@types/jest": "^30.0.0",
