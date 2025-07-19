@@ -92,4 +92,56 @@ describe('generateMermaidDiagram', () => {
       expect(result).toContain('classDiagram');
     });
   });
+
+  describe('discriminated unions', () => {
+    it('should generate diagrams for discriminated unions', () => {
+      const discriminatedUnionSchema = z.discriminatedUnion('type', [
+        z.object({
+          type: z.literal('success'),
+          data: z.string(),
+        }),
+        z.object({
+          type: z.literal('error'),
+          message: z.string(),
+        }),
+      ]);
+
+      const result = generateMermaidDiagram(discriminatedUnionSchema, {
+        diagramType: 'er',
+        entityName: 'Response',
+      });
+
+      expect(result).toContain('erDiagram');
+      expect(result).toContain('Response');
+      expect(result).toContain('Response_success');
+      expect(result).toContain('Response_error');
+      expect(result).toContain('enum: success, error');
+    });
+
+    it('should handle nested objects in discriminated unions', () => {
+      const discriminatedUnionSchema = z.discriminatedUnion('status', [
+        z.object({
+          status: z.literal('success'),
+          data: z.object({
+            id: z.string(),
+            name: z.string(),
+          }),
+        }),
+        z.object({
+          status: z.literal('error'),
+          message: z.string(),
+        }),
+      ]);
+
+      const result = generateMermaidDiagram(discriminatedUnionSchema, {
+        diagramType: 'er',
+        entityName: 'ApiResponse',
+      });
+
+      expect(result).toContain('ApiResponse');
+      expect(result).toContain('ApiResponse_success');
+      expect(result).toContain('ApiResponse_error');
+      expect(result).toContain('Data'); // Nested object should be created
+    });
+  });
 });

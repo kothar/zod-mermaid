@@ -153,6 +153,88 @@ flowchart TD
     Directory_children["children: Directory[]"] --> Directory
 ```
 
+## API Response Schema Example (Discriminated Union)
+
+### Entity-Relationship Diagram
+```mermaid
+erDiagram
+    ApiResponse {
+        string status "enum: success, error"
+    }
+    ApiResponse_success {
+        Data data
+        date timestamp
+    }
+    Data {
+        string id
+        string name
+        string email "email"
+    }
+    ApiResponse_error {
+        string message
+        number code
+        Details details
+    }
+    ApiResponse_success ||--|| Data : "data"
+    ApiResponse ||--|| ApiResponse_success : union
+    ApiResponse ||--|| ApiResponse_error : union
+```
+
+### Class Diagram
+```mermaid
+classDiagram
+    class ApiResponse {
+        +status: string
+    }
+    class ApiResponse_success {
+        +data: Data
+        +timestamp: date
+    }
+    class Data {
+        +id: string
+        +name: string
+        +email: string
+    }
+    class ApiResponse_error {
+        +message: string
+        +code: number
+        +details: Details
+    }
+    ApiResponse_success --> Data : data
+    ApiResponse <|-- ApiResponse_success : union
+    ApiResponse <|-- ApiResponse_error : union
+```
+
+### Flowchart Diagram
+```mermaid
+flowchart TD
+    ApiResponse["ApiResponse"]
+    ApiResponse_success["ApiResponse_success"]
+    Data["Data"]
+    ApiResponse_error["ApiResponse_error"]
+    ApiResponse_status["status: string"]
+    ApiResponse --> ApiResponse_status["status: string"]
+    ApiResponse_success_data["data: Data"]
+    ApiResponse_success --> ApiResponse_success_data["data: Data"]
+    ApiResponse_success_data["data: Data"] --> Data
+    ApiResponse_success_timestamp["timestamp: date"]
+    ApiResponse_success --> ApiResponse_success_timestamp["timestamp: date"]
+    Data_id["id: string"]
+    Data --> Data_id["id: string"]
+    Data_name["name: string"]
+    Data --> Data_name["name: string"]
+    Data_email["email: string"]
+    Data --> Data_email["email: string"]
+    ApiResponse_error_message["message: string"]
+    ApiResponse_error --> ApiResponse_error_message["message: string"]
+    ApiResponse_error_code["code: number"]
+    ApiResponse_error --> ApiResponse_error_code["code: number"]
+    ApiResponse_error_details["details: Details"]
+    ApiResponse_error --> ApiResponse_error_details["details: Details"]
+    ApiResponse -.-> ApiResponse_success
+    ApiResponse -.-> ApiResponse_error
+```
+
 ## Schema Definitions
 
 ### User Schema
@@ -198,6 +280,30 @@ const DirectorySchema = z.object({
   modifiedAt: z.date(),
   children: z.array(z.lazy(() => DirectorySchema)).optional(),
 }).describe('Directory');
+```
+
+### API Response Schema (Discriminated Union)
+```typescript
+const ApiResponseSchema = z.discriminatedUnion('status', [
+  z.object({
+    status: z.literal('success'),
+    data: z.object({
+      id: z.string(),
+      name: z.string(),
+      email: z.email(),
+    }),
+    timestamp: z.date(),
+  }).describe('ApiResponse_Success'),
+  z.object({
+    status: z.literal('error'),
+    message: z.string(),
+    code: z.number(),
+    details: z.object({
+      field: z.string().optional(),
+      reason: z.string(),
+    }).optional(),
+  }).describe('ApiResponse_Error'),
+]).describe('ApiResponse');
 ```
 
 ## Usage

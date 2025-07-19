@@ -67,4 +67,12 @@ export interface SchemaEntity {
   name: string;
   fields: SchemaField[];
   description?: string | undefined;
+  /**
+   * Union relationships - for discriminated unions
+   * Maps from base union entity to its subtypes
+   */
+  unionRelationships?: {
+    baseEntity: string;
+    subtypes: string[];
+  };
 }

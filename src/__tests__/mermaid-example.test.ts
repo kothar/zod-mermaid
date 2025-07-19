@@ -45,6 +45,28 @@ describe('Mermaid Example Generation', () => {
       children: z.array(z.lazy(() => DirectorySchema)).optional(),
     }).describe('Directory');
 
+    // Discriminated union example - API Response
+    const ApiResponseSchema = z.discriminatedUnion('status', [
+      z.object({
+        status: z.literal('success'),
+        data: z.object({
+          id: z.string(),
+          name: z.string(),
+          email: z.email(),
+        }),
+        timestamp: z.date(),
+      }).describe('ApiResponse_Success'),
+      z.object({
+        status: z.literal('error'),
+        message: z.string(),
+        code: z.number(),
+        details: z.object({
+          field: z.string().optional(),
+          reason: z.string(),
+        }).optional(),
+      }).describe('ApiResponse_Error'),
+    ]).describe('ApiResponse');
+
     // Generate different types of diagrams
     const erDiagram = generateMermaidDiagram(UserSchema, { diagramType: 'er' });
     const classDiagram = generateMermaidDiagram(UserSchema, { diagramType: 'class' });
@@ -55,6 +77,10 @@ describe('Mermaid Example Generation', () => {
     const directoryERDiagram = generateMermaidDiagram(DirectorySchema, { diagramType: 'er' });
     const directoryClassDiagram = generateMermaidDiagram(DirectorySchema, { diagramType: 'class' });
     const directoryFlowchartDiagram = generateMermaidDiagram(DirectorySchema, { diagramType: 'flowchart' });
+
+    const apiResponseERDiagram = generateMermaidDiagram(ApiResponseSchema, { diagramType: 'er' });
+    const apiResponseClassDiagram = generateMermaidDiagram(ApiResponseSchema, { diagramType: 'class' });
+    const apiResponseFlowchartDiagram = generateMermaidDiagram(ApiResponseSchema, { diagramType: 'flowchart' });
 
     // Create markdown content
     const markdownContent = `# Zod Mermaid Examples
@@ -102,6 +128,23 @@ ${directoryClassDiagram}
 ${directoryFlowchartDiagram}
 \`\`\`
 
+## API Response Schema Example (Discriminated Union)
+
+### Entity-Relationship Diagram
+\`\`\`mermaid
+${apiResponseERDiagram}
+\`\`\`
+
+### Class Diagram
+\`\`\`mermaid
+${apiResponseClassDiagram}
+\`\`\`
+
+### Flowchart Diagram
+\`\`\`mermaid
+${apiResponseFlowchartDiagram}
+\`\`\`
+
 ## Schema Definitions
 
 ### User Schema
@@ -147,6 +190,30 @@ const DirectorySchema = z.object({
   modifiedAt: z.date(),
   children: z.array(z.lazy(() => DirectorySchema)).optional(),
 }).describe('Directory');
+\`\`\`
+
+### API Response Schema (Discriminated Union)
+\`\`\`typescript
+const ApiResponseSchema = z.discriminatedUnion('status', [
+  z.object({
+    status: z.literal('success'),
+    data: z.object({
+      id: z.string(),
+      name: z.string(),
+      email: z.email(),
+    }),
+    timestamp: z.date(),
+  }).describe('ApiResponse_Success'),
+  z.object({
+    status: z.literal('error'),
+    message: z.string(),
+    code: z.number(),
+    details: z.object({
+      field: z.string().optional(),
+      reason: z.string(),
+    }).optional(),
+  }).describe('ApiResponse_Error'),
+]).describe('ApiResponse');
 \`\`\`
 
 ## Usage
