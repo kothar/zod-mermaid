@@ -296,8 +296,10 @@ function getFieldType(schema: z.ZodTypeAny, fieldName: string, entityName: strin
     return `${arrayType}[]`;
   }
   case 'object':
-    // For objects, we'll return a reference to the entity name
-    // Note: We don't have access to options here, so we'll use a default approach
+    // For objects, use the schema description if available, otherwise use field name
+    if (schema.description) {
+      return schema.description;
+    }
     return fieldName ? fieldName.charAt(0).toUpperCase() + fieldName.slice(1) : 'Entity';
   case 'enum':
     return 'string';
