@@ -126,7 +126,7 @@ function parseSchemaToEntities(
       const validation = getFieldValidation(fieldSchema);
 
       // Track ID references for placeholder entity creation
-      // Handle both direct ID refs and optional ID refs
+      // Handle direct ID refs, optional ID refs, and arrays of ID refs
       let isIdRef = false;
       let referencedEntity: string | undefined = undefined;
       
@@ -139,6 +139,14 @@ function parseSchemaToEntities(
         if (unwrappedSchema.def.type === 'string' && (unwrappedSchema as any).__idRef) {
           isIdRef = true;
           referencedEntity = (unwrappedSchema as any).__idRef;
+        }
+      } else if (fieldSchema.def.type === 'array') {
+        // For arrays, check if the element is an ID ref
+        const arraySchema = fieldSchema as z.ZodArray<any>;
+        const elementSchema = arraySchema.element;
+        if (elementSchema.def.type === 'string' && (elementSchema as any).__idRef) {
+          isIdRef = true;
+          referencedEntity = (elementSchema as any).__idRef;
         }
       }
       
@@ -513,6 +521,13 @@ function getFieldValidation(schema: z.ZodTypeAny): string[] {
     return getFieldValidation(unwrappedSchema);
   }
 
+  // Handle arrays
+  if (type === 'array') {
+    const arraySchema = schema as z.ZodArray<any>;
+    const elementSchema = arraySchema.element;
+    return getFieldValidation(elementSchema);
+  }
+
   // Check for string validations
   if (type === 'string') {
     const def = schema.def as any;
@@ -664,8 +679,15 @@ function generateERDiagram(entities: SchemaEntity[], options: Required<MermaidOp
         field.isIdReference &&
         field.referencedEntity
       ) {
-        // ID reference relationship - use a different line style to indicate reference vs embedding
-        const relationshipType = field.isOptional ? '}o--o{' : '}o--||';
+        // ID reference relationship - use different line styles for single vs array references
+        let relationshipType: string;
+        if (field.type.endsWith('[]')) {
+          // Array of ID references - use "many-to-many" relationship
+          relationshipType = '}o--o{';
+        } else {
+          // Single ID reference - use "many-to-one" relationship
+          relationshipType = field.isOptional ? '}o--o{' : '}o--||';
+        }
         lines.push(
           `    ${entity.name} ${relationshipType} ${field.referencedEntity} : "${field.name}"`,
         );

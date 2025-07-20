@@ -10,6 +10,7 @@ A TypeScript library that generates Mermaid diagrams from Zod schemas. Create be
 - **Nested Object Support**: Automatically creates separate entities for nested objects
 - **Discriminated Union Support**: Handles complex union types with separate entities for each variant
 - **Self-Referential Types**: Handles recursive schemas with lazy types
+- **ID References**: Create relationships between entities using ID references with proper cardinality
 - **Validation Display**: Shows field constraints and validation rules
 - **Record Type Support**: Displays record types with generic parameters
 - **Custom Entity Names**: Specify custom names for top-level entities
@@ -331,7 +332,7 @@ const CustomerSchema = z.object({
 const OrderSchema = z.object({
   id: z.uuid(),
   customerId: idRef(CustomerSchema), // References Customer entity
-  productId: idRef(ProductSchema),   // References Product entity
+  productIds: z.array(idRef(ProductSchema)), // References multiple Product entities
   quantity: z.number().positive(),
   orderDate: z.date(),
 }).describe('Order');
@@ -343,7 +344,7 @@ erDiagram
     Order {
         string id "uuid"
         string customerId "ref: Customer, uuid"
-        string productId "ref: Product, uuid"
+        string[] productIds "ref: Product, uuid"
         number quantity
         date orderDate
     }
@@ -352,7 +353,7 @@ erDiagram
     Product {
     }
     Order }o--|| Customer : "customerId"
-    Order }o--|| Product : "productId"
+    Order }o--o{ Product : "productIds"
 ```
 
 **Class Diagram Output:**
@@ -361,7 +362,7 @@ classDiagram
     class Order {
         +id: string
         +customerId: string
-        +productId: string
+        +productIds: string[]
         +quantity: number
         +orderDate: date
     }
@@ -370,10 +371,15 @@ classDiagram
     class Product {
     }
     Order --> Customer : customerId (ref)
-    Order --> Product : productId (ref)
+    Order --> Product : productIds (ref)
 ```
 
 This generates relationships to placeholder entities and shows the field types as `string` with the referenced entity in the validation column. The relationship style differentiates ID references from embedded relationships.
+
+**Relationship Cardinality:**
+- **Single ID references** (`idRef(Schema)`) use many-to-one relationships (`}o--||`)
+- **Array ID references** (`z.array(idRef(Schema))`) use many-to-many relationships (`}o--o{`)
+- **Optional ID references** use many-to-many relationships (`}o--o{`) to indicate optionality
 
 **Function Signature:**
 ```typescript
@@ -419,7 +425,8 @@ classDiagram
 **Relationship Styles:**
 - **ER Diagrams**: 
   - `||--||` or `||--o{`: Embedded relationships (full entity structure)
-  - `}o--||` or `}o--o{`: ID reference relationships (string ID references)
+  - `}o--||`: Single ID reference relationships (many-to-one)
+  - `}o--o{`: Array/optional ID reference relationships (many-to-many)
 - **Class Diagrams**: 
   - `*--`: Embedded relationships (UML composition with diamond)
   - `--> : fieldName (ref)`: ID reference relationships

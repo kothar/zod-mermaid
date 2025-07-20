@@ -207,5 +207,35 @@ describe('Mermaid Generator', () => {
       expect(diagram).toContain('Post }o--|| User : "authorId"');
       expect(diagram).toContain('Post }o--o{ User : "editorId"');
     });
+
+    it('should work with arrays of ID references', () => {
+      const UserSchema = z.object({
+        id: z.uuid(),
+        name: z.string(),
+      }).describe('User');
+
+      const ProductSchema = z.object({
+        id: z.uuid(),
+        name: z.string(),
+        price: z.number().positive(),
+      }).describe('Product');
+
+      const OrderSchema = z.object({
+        id: z.uuid(),
+        customerId: idRef(UserSchema),
+        productIds: z.array(idRef(ProductSchema)),
+        quantity: z.number().positive(),
+      }).describe('Order');
+
+      const diagram = generateMermaidDiagram(OrderSchema, { diagramType: 'er' });
+
+      // Should show ID reference fields with correct types
+      expect(diagram).toContain('string customerId "ref: User, uuid"');
+      expect(diagram).toContain('string[] productIds "ref: Product, uuid"');
+
+      // Should generate relationships with reference style
+      expect(diagram).toContain('Order }o--|| User : "customerId"');
+      expect(diagram).toContain('Order }o--o{ Product : "productIds"');
+    });
   });
 });

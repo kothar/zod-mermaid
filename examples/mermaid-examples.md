@@ -353,7 +353,7 @@ erDiagram
     Order {
         string id "uuid"
         string customerId "ref: Customer, uuid"
-        string productId "ref: Product, uuid"
+        string[] productIds "ref: Product, uuid"
         number quantity
         date orderDate
         string status "enum: pending, shipped, delivered"
@@ -363,7 +363,7 @@ erDiagram
     Product {
     }
     Order }o--|| Customer : "customerId"
-    Order }o--|| Product : "productId"
+    Order }o--o{ Product : "productIds"
 ```
 
 ### Class Diagram
@@ -372,7 +372,7 @@ classDiagram
     class Order {
         +id: string
         +customerId: string
-        +productId: string
+        +productIds: string[]
         +quantity: number
         +orderDate: date
         +status: string
@@ -382,7 +382,7 @@ classDiagram
     class Product {
     }
     Order --> Customer : customerId (ref)
-    Order --> Product : productId (ref)
+    Order --> Product : productIds (ref)
 ```
 
 ### Flowchart Diagram
@@ -396,9 +396,9 @@ flowchart TD
     Order_customerId["customerId: string"]
     Order --> Order_customerId["customerId: string"]
     Order_customerId["customerId: string"] -.-> Customer
-    Order_productId["productId: string"]
-    Order --> Order_productId["productId: string"]
-    Order_productId["productId: string"] -.-> Product
+    Order_productIds["productIds: string[]"]
+    Order --> Order_productIds["productIds: string[]"]
+    Order_productIds["productIds: string[]"] -.-> Product
     Order_quantity["quantity: number"]
     Order --> Order_quantity["quantity: number"]
     Order_orderDate["orderDate: date"]

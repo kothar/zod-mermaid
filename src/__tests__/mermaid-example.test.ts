@@ -131,7 +131,7 @@ describe('Mermaid Example Generation', () => {
     const OrderSchema = z.object({
       id: z.uuid(),
       customerId: idRef(CustomerSchema),
-      productId: idRef(ProductRefSchema),
+      productIds: z.array(idRef(ProductRefSchema)),
       quantity: z.number().positive(),
       orderDate: z.date(),
       status: z.enum(['pending', 'shipped', 'delivered']),
