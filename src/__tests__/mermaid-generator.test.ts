@@ -161,8 +161,8 @@ describe('Mermaid Generator', () => {
 
       const OrderSchema = z.object({
         id: z.uuid(),
-        customerId: idRef('Customer'),
-        productId: idRef('Product'),
+        customerId: idRef(CustomerSchema),
+        productId: idRef(ProductSchema),
         quantity: z.number().positive(),
         orderDate: z.date(),
       }).describe('Order');
@@ -175,8 +175,8 @@ describe('Mermaid Generator', () => {
       expect(diagram).toContain('Order');
 
       // Should show ID reference fields with correct types
-      expect(diagram).toContain('string customerId "ref: Customer"');
-      expect(diagram).toContain('string productId "ref: Product"');
+      expect(diagram).toContain('string customerId "ref: Customer, uuid"');
+      expect(diagram).toContain('string productId "ref: Product, uuid"');
 
       // Should generate relationships with reference style
       expect(diagram).toContain('Order }o--|| Customer : "customerId"');
@@ -193,15 +193,15 @@ describe('Mermaid Generator', () => {
         id: z.uuid(),
         title: z.string(),
         content: z.string(),
-        authorId: idRef('User'),
-        editorId: idRef('User').optional(),
+        authorId: idRef(UserSchema),
+        editorId: idRef(UserSchema).optional(),
       }).describe('Post');
 
       const diagram = generateMermaidDiagram(PostSchema, { diagramType: 'er' });
 
       // Should show both required and optional ID references
-      expect(diagram).toContain('string authorId "ref: User"');
-      expect(diagram).toContain('string editorId "ref: User"');
+      expect(diagram).toContain('string authorId "ref: User, uuid"');
+      expect(diagram).toContain('string editorId "ref: User, uuid"');
 
       // Should generate relationships with reference style and correct cardinality
       expect(diagram).toContain('Post }o--|| User : "authorId"');

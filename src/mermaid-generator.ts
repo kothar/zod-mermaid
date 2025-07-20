@@ -6,8 +6,10 @@ import { DiagramGenerationError, SchemaParseError, ZodMermaidError } from './err
  * Creates a string field that references another entity by ID
  * This allows you to indicate relationships without embedding the full entity
  * 
- * @param entityName - The name of the entity this ID references
- * @returns A Zod string schema with ID reference metadata
+ * @param schema - The Zod object schema representing the referenced entity
+ * @param idFieldName - The name of the ID field in the referenced schema (default: 'id')
+ * @param entityName - Optional custom name for the referenced entity
+ * @returns A Zod schema for the ID field with reference metadata
  * 
  * @example
  * const OrderSchema = z.object({
@@ -16,11 +18,33 @@ import { DiagramGenerationError, SchemaParseError, ZodMermaidError } from './err
  *   productId: idRef('Product'),   // References Product entity
  * });
  */
-export function idRef<T extends string>(entityName: T): z.ZodString {
-  const schema = z.string();
-  // Add metadata to the schema to indicate this is an ID reference
-  (schema as any).__idRef = entityName;
-  return schema;
+export function idRef<T extends z.ZodObject<Record<string, z.ZodTypeAny>>>(
+  schema: T,
+  idFieldName: string = 'id',
+  entityName?: string,
+): z.ZodTypeAny {
+  const { shape } = schema;
+  
+  if (!(idFieldName in shape)) {
+    throw new Error(`ID field '${idFieldName}' not found in schema`);
+  }
+
+  // Get the ID field schema
+  const idFieldSchema = shape[idFieldName];
+  if (!idFieldSchema) {
+    throw new Error(`ID field '${idFieldName}' not found in schema`);
+  }
+  
+  // Use the provided entity name or the schema description
+  const targetEntityName = entityName || schema.description || 'Unknown';
+  
+  // Create a new schema with the same type and validation as the ID field
+  const resultSchema = idFieldSchema.clone();
+  
+  // Add metadata to indicate this is an ID reference
+  (resultSchema as any).__idRef = targetEntityName;
+  
+  return resultSchema;
 }
 
 /**

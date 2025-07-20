@@ -352,8 +352,8 @@ flowchart TD
 erDiagram
     Order {
         string id "uuid"
-        string customerId "ref: Customer"
-        string productId "ref: Product"
+        string customerId "ref: Customer, uuid"
+        string productId "ref: Product, uuid"
         number quantity
         date orderDate
         string status "enum: pending, shipped, delivered"
@@ -526,8 +526,8 @@ const ProductSchema = z.object({
 
 const OrderSchema = z.object({
   id: z.uuid(),
-  customerId: idRef('Customer'),
-  productId: idRef('Product'),
+  customerId: idRef(CustomerSchema),
+  productId: idRef(ProductSchema),
   quantity: z.number().positive(),
   orderDate: z.date(),
   status: z.enum(['pending', 'shipped', 'delivered']),

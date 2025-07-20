@@ -319,7 +319,7 @@ classDiagram
 
 ### ID References
 
-For cases where you want to reference other entities by ID without embedding their full structure, use the `idRef()` function:
+For cases where you want to reference other entities by ID without embedding their full structure, use the `idRef()` function. The function takes a Zod schema as an argument and extracts the ID field type and validation:
 
 ```typescript
 const CustomerSchema = z.object({
@@ -330,8 +330,8 @@ const CustomerSchema = z.object({
 
 const OrderSchema = z.object({
   id: z.uuid(),
-  customerId: idRef('Customer'), // References Customer entity
-  productId: idRef('Product'),   // References Product entity
+  customerId: idRef(CustomerSchema), // References Customer entity
+  productId: idRef(ProductSchema),   // References Product entity
   quantity: z.number().positive(),
   orderDate: z.date(),
 }).describe('Order');
@@ -342,8 +342,8 @@ const OrderSchema = z.object({
 erDiagram
     Order {
         string id "uuid"
-        string customerId "ref: Customer"
-        string productId "ref: Product"
+        string customerId "ref: Customer, uuid"
+        string productId "ref: Product, uuid"
         number quantity
         date orderDate
     }
@@ -374,6 +374,17 @@ classDiagram
 ```
 
 This generates relationships to placeholder entities and shows the field types as `string` with the referenced entity in the validation column. The relationship style differentiates ID references from embedded relationships.
+
+**Function Signature:**
+```typescript
+idRef<T extends z.ZodObject<Record<string, z.ZodTypeAny>>>(
+  schema: T,
+  idFieldName?: string, // Default: 'id'
+  entityName?: string   // Default: schema.description
+): z.ZodTypeAny
+```
+
+The function validates that the provided schema is an object and contains the specified ID field. It extracts the ID field's type and validation rules to create a properly typed reference.
 
 **Note:** For embedded relationships, class diagrams use UML composition notation (`*--`) to indicate that the contained object is part of the containing object's lifecycle.
 
