@@ -15,6 +15,12 @@ A TypeScript library that generates Mermaid diagrams from Zod schemas. Create be
 - **Custom Entity Names**: Specify custom names for top-level entities
 - **Optional Field Handling**: Properly represents optional fields and relationships
 
+## AI-Generated Code
+
+This repository was primarily generated using AI (Claude Sonnet). 
+Human review was applied to ensure correctness and relevance.
+Contributions welcome!
+
 ## Installation
 
 ```bash
