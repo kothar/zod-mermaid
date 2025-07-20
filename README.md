@@ -8,6 +8,7 @@ A TypeScript library that generates Mermaid diagrams from Zod schemas. Create be
 
 - **Multiple Diagram Types**: Generate ER, Class, and Flowchart diagrams
 - **Nested Object Support**: Automatically creates separate entities for nested objects
+- **Discriminated Union Support**: Handles complex union types with separate entities for each variant
 - **Self-Referential Types**: Handles recursive schemas with lazy types
 - **Validation Display**: Shows field constraints and validation rules
 - **Record Type Support**: Displays record types with generic parameters
@@ -207,6 +208,108 @@ erDiagram
     User ||--|| Profile : "profile"
     Profile ||--|| Preferences : "preferences"
 ```
+
+### Discriminated Unions
+
+Handle complex event systems and API responses with discriminated unions:
+
+```typescript
+const ProductEventPayloadSchema = z.discriminatedUnion('eventType', [
+  z.object({
+    eventType: z.literal('addProduct'),
+    id: z.uuid(),
+    name: z.string(),
+    description: z.string(),
+    location: z.string(),
+  }).describe('AddProductEvent'),
+  z.object({
+    eventType: z.literal('removeProduct'),
+    id: z.uuid(),
+  }).describe('RemoveProductEvent'),
+  z.object({
+    eventType: z.literal('updateProduct'),
+    id: z.uuid(),
+    name: z.string(),
+    description: z.string(),
+    location: z.string(),
+  }).describe('UpdateProductEvent'),
+]).describe('ProductEventPayload');
+
+const EventSchema = z.object({
+  id: z.string(),
+  type: z.literal('com.example.event.product'),
+  date: z.date(),
+  data: ProductEventPayloadSchema,
+}).describe('Event');
+```
+
+**ER Diagram Output:**
+```mermaid
+erDiagram
+    Event {
+        string id
+        string type
+        date date
+        ProductEventPayload data
+    }
+    ProductEventPayload {
+        string eventType "enum: addProduct, removeProduct, updateProduct"
+    }
+    ProductEventPayload_addProduct {
+        string id
+        string name
+        string description
+        string location
+    }
+    ProductEventPayload_removeProduct {
+        string id
+    }
+    ProductEventPayload_updateProduct {
+        string id
+        string name
+        string description
+        string location
+    }
+    Event ||--|| ProductEventPayload : "data"
+    ProductEventPayload ||--|| ProductEventPayload_addProduct : union
+    ProductEventPayload ||--|| ProductEventPayload_removeProduct : union
+    ProductEventPayload ||--|| ProductEventPayload_updateProduct : union
+```
+
+**Class Diagram Output:**
+```mermaid
+classDiagram
+    class Event {
+        +id: string
+        +type: string
+        +date: date
+        +data: ProductEventPayload
+    }
+    class ProductEventPayload {
+        +eventType: string
+    }
+    class ProductEventPayload_addProduct {
+        +id: string
+        +name: string
+        +description: string
+        +location: string
+    }
+    class ProductEventPayload_removeProduct {
+        +id: string
+    }
+    class ProductEventPayload_updateProduct {
+        +id: string
+        +name: string
+        +description: string
+        +location: string
+    }
+    Event --> ProductEventPayload : data
+    ProductEventPayload <|-- ProductEventPayload_addProduct : union
+    ProductEventPayload <|-- ProductEventPayload_removeProduct : union
+    ProductEventPayload <|-- ProductEventPayload_updateProduct : union
+```
+
+**Note:** Use `.describe()` on your discriminated union and its members to provide meaningful entity names in the diagrams. The library automatically creates separate entities for each union member using their descriptions and shows the relationships between them with the discriminator values as edge labels.
 
 ## Configuration Options
 

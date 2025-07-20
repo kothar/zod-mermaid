@@ -161,7 +161,7 @@ erDiagram
     ApiResponse {
         string status "enum: success, error"
     }
-    ApiResponse_success {
+    ApiResponse_Success {
         Data data
         date timestamp
     }
@@ -170,14 +170,14 @@ erDiagram
         string name
         string email "email"
     }
-    ApiResponse_error {
+    ApiResponse_Error {
         string message
         number code
         Details details
     }
-    ApiResponse_success ||--|| Data : "data"
-    ApiResponse ||--|| ApiResponse_success : union
-    ApiResponse ||--|| ApiResponse_error : union
+    ApiResponse_Success ||--|| Data : "data"
+    ApiResponse ||--|| ApiResponse_Success : "success"
+    ApiResponse ||--|| ApiResponse_Error : "error"
 ```
 
 ### Class Diagram
@@ -186,7 +186,7 @@ classDiagram
     class ApiResponse {
         +status: string
     }
-    class ApiResponse_success {
+    class ApiResponse_Success {
         +data: Data
         +timestamp: date
     }
@@ -195,44 +195,154 @@ classDiagram
         +name: string
         +email: string
     }
-    class ApiResponse_error {
+    class ApiResponse_Error {
         +message: string
         +code: number
         +details: Details
     }
-    ApiResponse_success --> Data : data
-    ApiResponse <|-- ApiResponse_success : union
-    ApiResponse <|-- ApiResponse_error : union
+    ApiResponse_Success --> Data : data
+    ApiResponse <|-- ApiResponse_Success : success
+    ApiResponse <|-- ApiResponse_Error : error
 ```
 
 ### Flowchart Diagram
 ```mermaid
 flowchart TD
     ApiResponse["ApiResponse"]
-    ApiResponse_success["ApiResponse_success"]
+    ApiResponse_Success["ApiResponse_Success"]
     Data["Data"]
-    ApiResponse_error["ApiResponse_error"]
+    ApiResponse_Error["ApiResponse_Error"]
     ApiResponse_status["status: string"]
     ApiResponse --> ApiResponse_status["status: string"]
-    ApiResponse_success_data["data: Data"]
-    ApiResponse_success --> ApiResponse_success_data["data: Data"]
-    ApiResponse_success_data["data: Data"] --> Data
-    ApiResponse_success_timestamp["timestamp: date"]
-    ApiResponse_success --> ApiResponse_success_timestamp["timestamp: date"]
+    ApiResponse_Success_data["data: Data"]
+    ApiResponse_Success --> ApiResponse_Success_data["data: Data"]
+    ApiResponse_Success_data["data: Data"] --> Data
+    ApiResponse_Success_timestamp["timestamp: date"]
+    ApiResponse_Success --> ApiResponse_Success_timestamp["timestamp: date"]
     Data_id["id: string"]
     Data --> Data_id["id: string"]
     Data_name["name: string"]
     Data --> Data_name["name: string"]
     Data_email["email: string"]
     Data --> Data_email["email: string"]
-    ApiResponse_error_message["message: string"]
-    ApiResponse_error --> ApiResponse_error_message["message: string"]
-    ApiResponse_error_code["code: number"]
-    ApiResponse_error --> ApiResponse_error_code["code: number"]
-    ApiResponse_error_details["details: Details"]
-    ApiResponse_error --> ApiResponse_error_details["details: Details"]
-    ApiResponse -.-> ApiResponse_success
-    ApiResponse -.-> ApiResponse_error
+    ApiResponse_Error_message["message: string"]
+    ApiResponse_Error --> ApiResponse_Error_message["message: string"]
+    ApiResponse_Error_code["code: number"]
+    ApiResponse_Error --> ApiResponse_Error_code["code: number"]
+    ApiResponse_Error_details["details: Details"]
+    ApiResponse_Error --> ApiResponse_Error_details["details: Details"]
+    ApiResponse -.-> ApiResponse_Success
+    ApiResponse -.-> ApiResponse_Error
+```
+
+## Event Schema Example
+
+### Entity-Relationship Diagram
+```mermaid
+erDiagram
+    Event {
+        string id
+        string type "literal: com.example.event.product"
+        date date
+        ProductEventPayload data
+    }
+    ProductEventPayload {
+        string eventType "enum: addProduct, removeProduct, updateProduct"
+    }
+    AddProductEvent {
+        string id "uuid"
+        string name
+        string description
+        string location
+    }
+    RemoveProductEvent {
+        string id "uuid"
+    }
+    UpdateProductEvent {
+        string id "uuid"
+        string name
+        string description
+        string location
+    }
+    Event ||--|| ProductEventPayload : "data"
+    ProductEventPayload ||--|| AddProductEvent : "addProduct"
+    ProductEventPayload ||--|| RemoveProductEvent : "removeProduct"
+    ProductEventPayload ||--|| UpdateProductEvent : "updateProduct"
+```
+
+### Class Diagram
+```mermaid
+classDiagram
+    class Event {
+        +id: string
+        +type: string
+        +date: date
+        +data: ProductEventPayload
+    }
+    class ProductEventPayload {
+        +eventType: string
+    }
+    class AddProductEvent {
+        +id: string
+        +name: string
+        +description: string
+        +location: string
+    }
+    class RemoveProductEvent {
+        +id: string
+    }
+    class UpdateProductEvent {
+        +id: string
+        +name: string
+        +description: string
+        +location: string
+    }
+    Event --> ProductEventPayload : data
+    ProductEventPayload <|-- AddProductEvent : addProduct
+    ProductEventPayload <|-- RemoveProductEvent : removeProduct
+    ProductEventPayload <|-- UpdateProductEvent : updateProduct
+```
+
+### Flowchart Diagram
+```mermaid
+flowchart TD
+    Event["Event"]
+    ProductEventPayload["ProductEventPayload"]
+    AddProductEvent["AddProductEvent"]
+    RemoveProductEvent["RemoveProductEvent"]
+    UpdateProductEvent["UpdateProductEvent"]
+    Event_id["id: string"]
+    Event --> Event_id["id: string"]
+    Event_type["type: string"]
+    Event --> Event_type["type: string"]
+    Event_date["date: date"]
+    Event --> Event_date["date: date"]
+    Event_data["data: ProductEventPayload"]
+    Event --> Event_data["data: ProductEventPayload"]
+    Event_data["data: ProductEventPayload"] --> ProductEventPayload
+    ProductEventPayload_eventType["eventType: string"]
+    ProductEventPayload --> ProductEventPayload_eventType["eventType: string"]
+    AddProductEvent_id["id: string"]
+    AddProductEvent --> AddProductEvent_id["id: string"]
+    AddProductEvent_name["name: string"]
+    AddProductEvent --> AddProductEvent_name["name: string"]
+    AddProductEvent_description["description: string"]
+    AddProductEvent --> AddProductEvent_description["description: string"]
+    AddProductEvent_location["location: string"]
+    AddProductEvent --> AddProductEvent_location["location: string"]
+    RemoveProductEvent_id["id: string"]
+    RemoveProductEvent --> RemoveProductEvent_id["id: string"]
+    UpdateProductEvent_id["id: string"]
+    UpdateProductEvent --> UpdateProductEvent_id["id: string"]
+    UpdateProductEvent_name["name: string"]
+    UpdateProductEvent --> UpdateProductEvent_name["name: string"]
+    UpdateProductEvent_description["description: string"]
+    UpdateProductEvent --> UpdateProductEvent_description["description: string"]
+    UpdateProductEvent_location["location: string"]
+    UpdateProductEvent --> UpdateProductEvent_location["location: string"]
+    ProductEventPayload -.-> AddProductEvent
+    ProductEventPayload -.-> RemoveProductEvent
+    ProductEventPayload -.-> UpdateProductEvent
 ```
 
 ## Schema Definitions
@@ -306,6 +416,36 @@ const ApiResponseSchema = z.discriminatedUnion('status', [
 ]).describe('ApiResponse');
 ```
 
+### Event Schema
+```typescript
+const ProductEventPayloadSchema = z.discriminatedUnion('eventType', [
+  z.object({
+    eventType: z.literal('addProduct'),
+    id: z.uuid(),
+    name: z.string(),
+    description: z.string(),
+    location: z.string(),
+  }).describe('AddProductEvent'),
+  z.object({
+    eventType: z.literal('removeProduct'),
+    id: z.uuid(),
+  }).describe('RemoveProductEvent'),
+  z.object({
+    eventType: z.literal('updateProduct'),
+    id: z.uuid(),
+    name: z.string(),
+    description: z.string(),
+    location: z.string(),
+  }).describe('UpdateProductEvent'),
+]).describe('ProductEventPayload');
+
+const EventSchema = z.object({
+  id: z.string(),
+  type: z.literal('com.example.event.product'),
+  date: z.date(),
+  data: ProductEventPayloadSchema,
+}).describe('Event');
+```
 ## Usage
 
 To generate your own diagrams:

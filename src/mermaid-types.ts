@@ -69,10 +69,10 @@ export interface SchemaEntity {
   description?: string | undefined;
   /**
    * Union relationships - for discriminated unions
-   * Maps from base union entity to its subtypes
+   * Maps from base union entity to its subtypes with discriminator values
    */
   unionRelationships?: {
     baseEntity: string;
-    subtypes: string[];
+    subtypes: Array<{ name: string; discriminatorValue: string }>;
   };
 }

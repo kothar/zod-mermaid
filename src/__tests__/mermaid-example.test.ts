@@ -67,6 +67,34 @@ describe('Mermaid Example Generation', () => {
       }).describe('ApiResponse_Error'),
     ]).describe('ApiResponse');
 
+    const ProductEventPayloadSchema = z.discriminatedUnion('eventType', [
+      z.object({
+        eventType: z.literal('addProduct'),
+        id: z.uuid(),
+        name: z.string(),
+        description: z.string(),
+        location: z.string(),
+      }).describe('AddProductEvent'),
+      z.object({
+        eventType: z.literal('removeProduct'),
+        id: z.uuid(),
+      }).describe('RemoveProductEvent'),
+      z.object({
+        eventType: z.literal('updateProduct'),
+        id: z.uuid(),
+        name: z.string(),
+        description: z.string(),
+        location: z.string(),
+      }).describe('UpdateProductEvent'),
+    ]).describe('ProductEventPayload');
+
+    const EventSchema = z.object({
+      id: z.string(),
+      type: z.literal('com.example.event.product'),
+      date: z.date(),
+      data: ProductEventPayloadSchema,
+    }).describe('Event');
+
     // Generate different types of diagrams
     const erDiagram = generateMermaidDiagram(UserSchema, { diagramType: 'er' });
     const classDiagram = generateMermaidDiagram(UserSchema, { diagramType: 'class' });
@@ -81,6 +109,10 @@ describe('Mermaid Example Generation', () => {
     const apiResponseERDiagram = generateMermaidDiagram(ApiResponseSchema, { diagramType: 'er' });
     const apiResponseClassDiagram = generateMermaidDiagram(ApiResponseSchema, { diagramType: 'class' });
     const apiResponseFlowchartDiagram = generateMermaidDiagram(ApiResponseSchema, { diagramType: 'flowchart' });
+
+    const eventERDiagram = generateMermaidDiagram(EventSchema, { diagramType: 'er' });
+    const eventClassDiagram = generateMermaidDiagram(EventSchema, { diagramType: 'class' });
+    const eventFlowchartDiagram = generateMermaidDiagram(EventSchema, { diagramType: 'flowchart' });
 
     // Create markdown content
     const markdownContent = `# Zod Mermaid Examples
@@ -143,6 +175,23 @@ ${apiResponseClassDiagram}
 ### Flowchart Diagram
 \`\`\`mermaid
 ${apiResponseFlowchartDiagram}
+\`\`\`
+
+## Event Schema Example
+
+### Entity-Relationship Diagram
+\`\`\`mermaid
+${eventERDiagram}
+\`\`\`
+
+### Class Diagram
+\`\`\`mermaid
+${eventClassDiagram}
+\`\`\`
+
+### Flowchart Diagram
+\`\`\`mermaid
+${eventFlowchartDiagram}
 \`\`\`
 
 ## Schema Definitions
@@ -216,6 +265,36 @@ const ApiResponseSchema = z.discriminatedUnion('status', [
 ]).describe('ApiResponse');
 \`\`\`
 
+### Event Schema
+\`\`\`typescript
+const ProductEventPayloadSchema = z.discriminatedUnion('eventType', [
+  z.object({
+    eventType: z.literal('addProduct'),
+    id: z.uuid(),
+    name: z.string(),
+    description: z.string(),
+    location: z.string(),
+  }).describe('AddProductEvent'),
+  z.object({
+    eventType: z.literal('removeProduct'),
+    id: z.uuid(),
+  }).describe('RemoveProductEvent'),
+  z.object({
+    eventType: z.literal('updateProduct'),
+    id: z.uuid(),
+    name: z.string(),
+    description: z.string(),
+    location: z.string(),
+  }).describe('UpdateProductEvent'),
+]).describe('ProductEventPayload');
+
+const EventSchema = z.object({
+  id: z.string(),
+  type: z.literal('com.example.event.product'),
+  date: z.date(),
+  data: ProductEventPayloadSchema,
+}).describe('Event');
+\`\`\`
 ## Usage
 
 To generate your own diagrams:

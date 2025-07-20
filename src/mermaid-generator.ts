@@ -95,10 +95,14 @@ function parseSchemaToEntities(
       description: undefined,
     });
 
-    // Recursively parse nested objects
+    // Recursively parse nested objects and unions
     for (const [key, value] of Object.entries(shape)) {
       const fieldSchema = value as z.ZodTypeAny;
       if (fieldSchema.def.type === 'object') {
+        const nestedEntities = parseSchemaToEntities(fieldSchema, options, key);
+        entities.push(...nestedEntities);
+      } else if (fieldSchema.def.type === 'union' && (fieldSchema.def as any).discriminator) {
+        // Handle discriminated unions as nested fields
         const nestedEntities = parseSchemaToEntities(fieldSchema, options, key);
         entities.push(...nestedEntities);
       } else if (fieldSchema.def.type === 'lazy') {
@@ -107,6 +111,10 @@ function parseSchemaToEntities(
           const lazySchema = fieldSchema as z.ZodLazy<any>;
           const resolvedSchema = lazySchema.unwrap();
           if (resolvedSchema.def.type === 'object') {
+            const nestedEntities = parseSchemaToEntities(resolvedSchema, options, key);
+            entities.push(...nestedEntities);
+          } else if (resolvedSchema.def.type === 'union' && (resolvedSchema.def as any).discriminator) {
+            // Handle discriminated unions in lazy types
             const nestedEntities = parseSchemaToEntities(resolvedSchema, options, key);
             entities.push(...nestedEntities);
           }
@@ -141,7 +149,7 @@ function parseSchemaToEntities(
     };
 
     // Track union subtypes for relationship generation
-    const unionSubtypes: string[] = [];
+    const unionSubtypes: Array<{ name: string; discriminatorValue: string }> = [];
 
     entities.push({
       name: unionEntityName,
@@ -160,7 +168,9 @@ function parseSchemaToEntities(
       if (optionSchema.def.type === 'object') {
         const optionDef = optionSchema.def as any;
         const [discriminatorValue] = optionDef.shape[discriminator].def.values;
-        const optionEntityName = `${unionEntityName}_${discriminatorValue}`;
+        
+        // Use the schema description if available, otherwise fall back to the generic naming
+        const optionEntityName = optionSchema.description || `${unionEntityName}_${discriminatorValue}`;
 
         // Create the option entity with all fields except the discriminator
         const optionFields = Object.entries(optionDef.shape)
@@ -186,8 +196,8 @@ function parseSchemaToEntities(
           description: undefined,
         });
 
-        // Add to union subtypes tracking
-        unionSubtypes.push(optionEntityName);
+        // Add to union subtypes tracking with discriminator value
+        unionSubtypes.push({ name: optionEntityName, discriminatorValue });
 
         // Recursively parse nested objects in the option
         for (const [key, value] of Object.entries(optionDef.shape)) {
@@ -294,10 +304,18 @@ function getFieldType(schema: z.ZodTypeAny, fieldName: string, entityName: strin
   case 'literal': {
     const literalDef = schema.def as any;
     const [literalValue] = literalDef.values;
+    // For literal types, return the actual type, not the literal value
+    // The literal value will be handled in validation
     if (typeof literalValue === 'string') {
-      return `"${literalValue}"`;
+      return 'string';
     }
-    return String(literalValue);
+    if (typeof literalValue === 'number') {
+      return 'number';
+    }
+    if (typeof literalValue === 'boolean') {
+      return 'boolean';
+    }
+    return typeof literalValue;
   }
   case 'record': {
     const recordDef = schema.def as any;
@@ -339,6 +357,11 @@ function getFieldType(schema: z.ZodTypeAny, fieldName: string, entityName: strin
     const unionDef = schema.def as any;
     if (unionDef.discriminator) {
       // For discriminated unions, return the base entity name
+      // The actual entity name will be determined during parsing
+      // We need to get the entity name from the schema description or field name
+      if (schema.description) {
+        return schema.description;
+      }
       return fieldName ? fieldName.charAt(0).toUpperCase() + fieldName.slice(1) : 'Union';
     }
     // For regular unions, return a generic union type
@@ -475,6 +498,17 @@ function getFieldValidation(schema: z.ZodTypeAny): string[] {
     validations.push(`enum: ${enumValues.join(', ')}`);
   }
 
+  // Check for literal validations
+  if (type === 'literal') {
+    const literalDef = schema.def as any;
+    const [literalValue] = literalDef.values;
+    if (typeof literalValue === 'string') {
+      validations.push(`literal: ${literalValue}`);
+    } else {
+      validations.push(`literal: ${literalValue}`);
+    }
+  }
+
   return validations;
 }
 
@@ -551,8 +585,8 @@ function generateERDiagram(entities: SchemaEntity[], options: Required<MermaidOp
     if (entity.unionRelationships) {
       const { baseEntity, subtypes } = entity.unionRelationships;
       for (const subtype of subtypes) {
-        // Use inheritance-style relationship for union types
-        lines.push(`    ${baseEntity} ||--|| ${subtype} : union`);
+        // Use discriminator value as the relationship label
+        lines.push(`    ${baseEntity} ||--|| ${subtype.name} : "${subtype.discriminatorValue}"`);
       }
     }
   }
@@ -619,8 +653,8 @@ function generateClassDiagram(entities: SchemaEntity[]): string {
     if (entity.unionRelationships) {
       const { baseEntity, subtypes } = entity.unionRelationships;
       for (const subtype of subtypes) {
-        // Use inheritance-style relationship for union types
-        lines.push(`    ${baseEntity} <|-- ${subtype} : union`);
+        // Use discriminator value as the relationship label
+        lines.push(`    ${baseEntity} <|-- ${subtype.name} : ${subtype.discriminatorValue}`);
       }
     }
   }
@@ -679,8 +713,8 @@ function generateFlowchartDiagram(entities: SchemaEntity[]): string {
     if (entity.unionRelationships) {
       const { baseEntity, subtypes } = entity.unionRelationships;
       for (const subtype of subtypes) {
-        // Use inheritance-style relationship for union types (no label in flowcharts)
-        lines.push(`    ${baseEntity} -.-> ${subtype}`);
+        // Flowcharts don't support labels on dotted lines, so just show the connection
+        lines.push(`    ${baseEntity} -.-> ${subtype.name}`);
       }
     }
   }
