@@ -5,12 +5,12 @@ import { DiagramGenerationError, SchemaParseError, ZodMermaidError } from './err
 /**
  * Creates a string field that references another entity by ID
  * This allows you to indicate relationships without embedding the full entity
- * 
+ *
  * @param schema - The Zod object schema representing the referenced entity
  * @param idFieldName - The name of the ID field in the referenced schema (default: 'id')
  * @param entityName - Optional custom name for the referenced entity
  * @returns A Zod schema for the ID field with reference metadata
- * 
+ *
  * @example
  * const OrderSchema = z.object({
  *   id: z.uuid(),
@@ -24,7 +24,7 @@ export function idRef<T extends z.ZodObject<Record<string, z.ZodTypeAny>>>(
   entityName?: string,
 ): z.ZodTypeAny {
   const { shape } = schema;
-  
+
   if (!(idFieldName in shape)) {
     throw new Error(`ID field '${idFieldName}' not found in schema`);
   }
@@ -34,16 +34,16 @@ export function idRef<T extends z.ZodObject<Record<string, z.ZodTypeAny>>>(
   if (!idFieldSchema) {
     throw new Error(`ID field '${idFieldName}' not found in schema`);
   }
-  
+
   // Use the provided entity name or the schema description
   const targetEntityName = entityName || schema.description || 'Unknown';
-  
+
   // Create a new schema with the same type and validation as the ID field
   const resultSchema = idFieldSchema.clone();
-  
+
   // Add metadata to indicate this is an ID reference
   (resultSchema as any).__idRef = targetEntityName;
-  
+
   return resultSchema;
 }
 
@@ -62,25 +62,38 @@ const DEFAULT_OPTIONS: Required<MermaidOptions> = {
 };
 
 /**
- * Generates a Mermaid diagram from a Zod schema
- * @param schema - The Zod schema to convert to a diagram
+ * Generates a Mermaid diagram from one or more Zod schemas
+ * @param schema - The Zod schema(s) to convert to a diagram.
+ * Can be a single schema or an array of schemas
  * @param options - Options for diagram generation
  * @returns A Mermaid diagram string
  * @throws {SchemaParseError} When schema parsing fails
  * @throws {DiagramGenerationError} When diagram generation fails
  */
-export function generateMermaidDiagram(schema: z.ZodTypeAny, options: MermaidOptions = {}): string {
+export function generateMermaidDiagram(
+  schema: z.ZodTypeAny | z.ZodTypeAny[],
+  options: MermaidOptions = {},
+): string {
   try {
     const mergedOptions = { ...DEFAULT_OPTIONS, ...options };
-    const entities = parseSchemaToEntities(schema, mergedOptions);
+
+    // Handle both single schema and array of schemas
+    const schemas = Array.isArray(schema) ? schema : [schema];
+    const allEntities: SchemaEntity[] = [];
+
+    // Parse each schema and collect all entities
+    for (const singleSchema of schemas) {
+      const entities = parseSchemaToEntities(singleSchema, mergedOptions);
+      allEntities.push(...entities);
+    }
 
     switch (mergedOptions.diagramType) {
     case 'er':
-      return generateERDiagram(entities, mergedOptions);
+      return generateERDiagram(allEntities, mergedOptions);
     case 'class':
-      return generateClassDiagram(entities);
+      return generateClassDiagram(allEntities);
     case 'flowchart':
-      return generateFlowchartDiagram(entities);
+      return generateFlowchartDiagram(allEntities);
     default:
       throw new DiagramGenerationError(
         `Unsupported diagram type: ${mergedOptions.diagramType}`,
@@ -129,7 +142,7 @@ function parseSchemaToEntities(
       // Handle direct ID refs, optional ID refs, and arrays of ID refs
       let isIdRef = false;
       let referencedEntity: string | undefined = undefined;
-      
+
       if (fieldType === 'string' && (fieldSchema as any).__idRef) {
         isIdRef = true;
         referencedEntity = (fieldSchema as any).__idRef;
@@ -149,7 +162,7 @@ function parseSchemaToEntities(
           referencedEntity = (elementSchema as any).__idRef;
         }
       }
-      
+
       if (isIdRef && referencedEntity) {
         idReferences.add(referencedEntity);
       }
@@ -244,7 +257,7 @@ function parseSchemaToEntities(
       if (optionSchema.def.type === 'object') {
         const optionDef = optionSchema.def as any;
         const [discriminatorValue] = optionDef.shape[discriminator].def.values;
-        
+
         // Use the schema description if available, otherwise fall back to the generic naming
         const optionEntityName = optionSchema.description || `${unionEntityName}_${discriminatorValue}`;
 

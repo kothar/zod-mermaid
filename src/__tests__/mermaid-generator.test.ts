@@ -238,4 +238,127 @@ describe('Mermaid Generator', () => {
       expect(diagram).toContain('Order }o--o{ Product : "productIds"');
     });
   });
+
+  describe('multiple schemas', () => {
+    it('should generate diagrams from an array of schemas', () => {
+      const UserSchema = z.object({
+        id: z.uuid(),
+        name: z.string(),
+        email: z.email(),
+      }).describe('User');
+
+      const ProductSchema = z.object({
+        id: z.uuid(),
+        name: z.string(),
+        price: z.number().positive(),
+        category: z.enum(['electronics', 'clothing', 'books']),
+      }).describe('Product');
+
+      const OrderSchema = z.object({
+        id: z.uuid(),
+        customerId: idRef(UserSchema),
+        productId: idRef(ProductSchema),
+        quantity: z.number().positive(),
+        orderDate: z.date(),
+      }).describe('Order');
+
+      const schemas = [UserSchema, ProductSchema, OrderSchema];
+      const diagram = generateMermaidDiagram(schemas, { diagramType: 'er' });
+
+      // Should include all entities from all schemas
+      expect(diagram).toContain('User');
+      expect(diagram).toContain('Product');
+      expect(diagram).toContain('Order');
+
+      // Should show relationships between entities
+      expect(diagram).toContain('Order }o--|| User : "customerId"');
+      expect(diagram).toContain('Order }o--|| Product : "productId"');
+    });
+
+    it('should handle single schema the same as before', () => {
+      const UserSchema = z.object({
+        id: z.uuid(),
+        name: z.string(),
+        email: z.email(),
+      }).describe('User');
+
+      const singleResult = generateMermaidDiagram(UserSchema, { diagramType: 'er' });
+      const arrayResult = generateMermaidDiagram([UserSchema], { diagramType: 'er' });
+
+      // Both should produce the same result
+      expect(singleResult).toBe(arrayResult);
+      expect(singleResult).toContain('User');
+    });
+
+    it('should combine entities from multiple schemas without duplicates', () => {
+      const UserSchema = z.object({
+        id: z.uuid(),
+        name: z.string(),
+        email: z.email(),
+      }).describe('User');
+
+      const UserProfileSchema = z.object({
+        userId: idRef(UserSchema),
+        bio: z.string().optional(),
+        avatar: z.url().optional(),
+      }).describe('UserProfile');
+
+      const schemas = [UserSchema, UserProfileSchema];
+      const diagram = generateMermaidDiagram(schemas, { diagramType: 'er' });
+
+      // Should include both entities
+      expect(diagram).toContain('User');
+      expect(diagram).toContain('UserProfile');
+
+      // Should show the relationship
+      expect(diagram).toContain('UserProfile }o--|| User : "userId"');
+
+      // Should include both entities
+      expect(diagram).toContain('User {');
+      expect(diagram).toContain('UserProfile {');
+      
+      // Should show the relationship
+      expect(diagram).toContain('UserProfile }o--|| User : "userId"');
+    });
+
+    it('should work with all diagram types for multiple schemas', () => {
+      const UserSchema = z.object({
+        id: z.uuid(),
+        name: z.string(),
+      }).describe('User');
+
+      const ProductSchema = z.object({
+        id: z.uuid(),
+        name: z.string(),
+        price: z.number().positive(),
+      }).describe('Product');
+
+      const schemas = [UserSchema, ProductSchema];
+
+      // Test ER diagram
+      const erDiagram = generateMermaidDiagram(schemas, { diagramType: 'er' });
+      expect(erDiagram).toContain('erDiagram');
+      expect(erDiagram).toContain('User');
+      expect(erDiagram).toContain('Product');
+
+      // Test class diagram
+      const classDiagram = generateMermaidDiagram(schemas, { diagramType: 'class' });
+      expect(classDiagram).toContain('classDiagram');
+      expect(classDiagram).toContain('class User');
+      expect(classDiagram).toContain('class Product');
+
+      // Test flowchart diagram
+      const flowchartDiagram = generateMermaidDiagram(schemas, { diagramType: 'flowchart' });
+      expect(flowchartDiagram).toContain('flowchart TD');
+      expect(flowchartDiagram).toContain('User["User"]');
+      expect(flowchartDiagram).toContain('Product["Product"]');
+    });
+
+    it('should handle empty array of schemas', () => {
+      const diagram = generateMermaidDiagram([], { diagramType: 'er' });
+      
+      // Should generate a valid but empty diagram
+      expect(diagram).toBe('erDiagram');
+    });
+  });
 });

@@ -62,6 +62,40 @@ const flowchartDiagram = generateMermaidDiagram(UserSchema, {
 });
 ```
 
+### Multiple Schemas
+
+You can also generate diagrams from multiple schemas at once by passing an array:
+
+```typescript
+const UserSchema = z.object({
+  id: z.uuid(),
+  name: z.string(),
+  email: z.email(),
+}).describe('User');
+
+const ProductSchema = z.object({
+  id: z.uuid(),
+  name: z.string(),
+  price: z.number().positive(),
+  category: z.enum(['electronics', 'clothing', 'books']),
+}).describe('Product');
+
+const OrderSchema = z.object({
+  id: z.uuid(),
+  customerId: idRef(UserSchema),
+  productId: idRef(ProductSchema),
+  quantity: z.number().positive(),
+  orderDate: z.date(),
+}).describe('Order');
+
+// Generate diagram from multiple schemas
+const diagram = generateMermaidDiagram([UserSchema, ProductSchema, OrderSchema], { 
+  diagramType: 'er' 
+});
+```
+
+This will generate a single diagram containing all entities and their relationships from all the provided schemas.
+
 ## Diagram Types
 
 ### Entity-Relationship Diagrams
@@ -432,6 +466,19 @@ classDiagram
   - `--> : fieldName (ref)`: ID reference relationships
 
 ## Configuration Options
+
+### Function Signature
+
+```typescript
+function generateMermaidDiagram(
+  schema: z.ZodTypeAny | z.ZodTypeAny[],
+  options?: MermaidOptions
+): string
+```
+
+The function accepts either a single Zod schema or an array of schemas, along with optional configuration options.
+
+### Options Interface
 
 ```typescript
 interface MermaidOptions {
