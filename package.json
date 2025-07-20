@@ -1,6 +1,6 @@
 {
   "name": "zod-mermaid",
-  "version": "1.0.6",
+  "version": "1.0.7",
   "description": "Generate Mermaid diagrams from Zod schemas",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
