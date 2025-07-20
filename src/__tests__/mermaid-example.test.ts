@@ -3,7 +3,7 @@ import { join } from 'path';
 
 import { z } from 'zod';
 
-import { generateMermaidDiagram } from '../mermaid-generator';
+import { generateMermaidDiagram, idRef } from '../mermaid-generator';
 
 describe('Mermaid Example Generation', () => {
   it('should generate example diagrams and save to markdown', () => {
@@ -114,6 +114,33 @@ describe('Mermaid Example Generation', () => {
     const eventClassDiagram = generateMermaidDiagram(EventSchema, { diagramType: 'class' });
     const eventFlowchartDiagram = generateMermaidDiagram(EventSchema, { diagramType: 'flowchart' });
 
+    // ID Reference Example
+    const CustomerSchema = z.object({
+      id: z.uuid(),
+      name: z.string(),
+      email: z.email(),
+    }).describe('Customer');
+
+    const ProductRefSchema = z.object({
+      id: z.uuid(),
+      name: z.string(),
+      price: z.number().positive(),
+      category: z.enum(['electronics', 'clothing', 'books']),
+    }).describe('Product');
+
+    const OrderSchema = z.object({
+      id: z.uuid(),
+      customerId: idRef('Customer'),
+      productId: idRef('Product'),
+      quantity: z.number().positive(),
+      orderDate: z.date(),
+      status: z.enum(['pending', 'shipped', 'delivered']),
+    }).describe('Order');
+
+    const orderERDiagram = generateMermaidDiagram(OrderSchema, { diagramType: 'er' });
+    const orderClassDiagram = generateMermaidDiagram(OrderSchema, { diagramType: 'class' });
+    const orderFlowchartDiagram = generateMermaidDiagram(OrderSchema, { diagramType: 'flowchart' });
+
     // Create markdown content
     const markdownContent = `# Zod Mermaid Examples
 
@@ -192,6 +219,23 @@ ${eventClassDiagram}
 ### Flowchart Diagram
 \`\`\`mermaid
 ${eventFlowchartDiagram}
+\`\`\`
+
+## ID Reference Schema Example
+
+### Entity-Relationship Diagram
+\`\`\`mermaid
+${orderERDiagram}
+\`\`\`
+
+### Class Diagram
+\`\`\`mermaid
+${orderClassDiagram}
+\`\`\`
+
+### Flowchart Diagram
+\`\`\`mermaid
+${orderFlowchartDiagram}
 \`\`\`
 
 ## Schema Definitions
@@ -295,6 +339,34 @@ const EventSchema = z.object({
   data: ProductEventPayloadSchema,
 }).describe('Event');
 \`\`\`
+
+### ID Reference Schema
+\`\`\`typescript
+const CustomerSchema = z.object({
+  id: z.uuid(),
+  name: z.string(),
+  email: z.email(),
+}).describe('Customer');
+
+const ProductSchema = z.object({
+  id: z.uuid(),
+  name: z.string(),
+  price: z.number().positive(),
+  category: z.enum(['electronics', 'clothing', 'books']),
+}).describe('Product');
+
+const OrderSchema = z.object({
+  id: z.uuid(),
+  customerId: idRef('Customer'),
+  productId: idRef('Product'),
+  quantity: z.number().positive(),
+  orderDate: z.date(),
+  status: z.enum(['pending', 'shipped', 'delivered']),
+}).describe('Order');
+\`\`\`
+
+**Note:** The \`idRef()\` function creates string fields that reference other entities by ID. This allows you to show relationships without embedding the full entity structure. The library automatically generates placeholder entities and relationships for referenced entities.
+
 ## Usage
 
 To generate your own diagrams:

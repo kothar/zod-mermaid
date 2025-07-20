@@ -50,8 +50,8 @@ classDiagram
         +theme: string
         +notifications: boolean
     }
-    User --> Profile : profile
-    Profile --> Preferences : preferences
+    User *-- Profile : profile
+    Profile *-- Preferences : preferences
 ```
 
 ### Flowchart Diagram
@@ -131,7 +131,7 @@ classDiagram
         +modifiedAt: date
         +children: Directory[]
     }
-    Directory --> Directory : children
+    Directory *-- Directory : children
 ```
 
 ### Flowchart Diagram
@@ -200,7 +200,7 @@ classDiagram
         +code: number
         +details: Details
     }
-    ApiResponse_Success --> Data : data
+    ApiResponse_Success *-- Data : data
     ApiResponse <|-- ApiResponse_Success : success
     ApiResponse <|-- ApiResponse_Error : error
 ```
@@ -297,7 +297,7 @@ classDiagram
         +description: string
         +location: string
     }
-    Event --> ProductEventPayload : data
+    Event *-- ProductEventPayload : data
     ProductEventPayload <|-- AddProductEvent : addProduct
     ProductEventPayload <|-- RemoveProductEvent : removeProduct
     ProductEventPayload <|-- UpdateProductEvent : updateProduct
@@ -343,6 +343,68 @@ flowchart TD
     ProductEventPayload -.-> AddProductEvent
     ProductEventPayload -.-> RemoveProductEvent
     ProductEventPayload -.-> UpdateProductEvent
+```
+
+## ID Reference Schema Example
+
+### Entity-Relationship Diagram
+```mermaid
+erDiagram
+    Order {
+        string id "uuid"
+        string customerId "ref: Customer"
+        string productId "ref: Product"
+        number quantity
+        date orderDate
+        string status "enum: pending, shipped, delivered"
+    }
+    Customer {
+    }
+    Product {
+    }
+    Order }o--|| Customer : "customerId"
+    Order }o--|| Product : "productId"
+```
+
+### Class Diagram
+```mermaid
+classDiagram
+    class Order {
+        +id: string
+        +customerId: string
+        +productId: string
+        +quantity: number
+        +orderDate: date
+        +status: string
+    }
+    class Customer {
+    }
+    class Product {
+    }
+    Order --> Customer : customerId (ref)
+    Order --> Product : productId (ref)
+```
+
+### Flowchart Diagram
+```mermaid
+flowchart TD
+    Order["Order"]
+    Customer["Customer"]
+    Product["Product"]
+    Order_id["id: string"]
+    Order --> Order_id["id: string"]
+    Order_customerId["customerId: string"]
+    Order --> Order_customerId["customerId: string"]
+    Order_customerId["customerId: string"] -.-> Customer
+    Order_productId["productId: string"]
+    Order --> Order_productId["productId: string"]
+    Order_productId["productId: string"] -.-> Product
+    Order_quantity["quantity: number"]
+    Order --> Order_quantity["quantity: number"]
+    Order_orderDate["orderDate: date"]
+    Order --> Order_orderDate["orderDate: date"]
+    Order_status["status: string"]
+    Order --> Order_status["status: string"]
 ```
 
 ## Schema Definitions
@@ -446,6 +508,34 @@ const EventSchema = z.object({
   data: ProductEventPayloadSchema,
 }).describe('Event');
 ```
+
+### ID Reference Schema
+```typescript
+const CustomerSchema = z.object({
+  id: z.uuid(),
+  name: z.string(),
+  email: z.email(),
+}).describe('Customer');
+
+const ProductSchema = z.object({
+  id: z.uuid(),
+  name: z.string(),
+  price: z.number().positive(),
+  category: z.enum(['electronics', 'clothing', 'books']),
+}).describe('Product');
+
+const OrderSchema = z.object({
+  id: z.uuid(),
+  customerId: idRef('Customer'),
+  productId: idRef('Product'),
+  quantity: z.number().positive(),
+  orderDate: z.date(),
+  status: z.enum(['pending', 'shipped', 'delivered']),
+}).describe('Order');
+```
+
+**Note:** The `idRef()` function creates string fields that reference other entities by ID. This allows you to show relationships without embedding the full entity structure. The library automatically generates placeholder entities and relationships for referenced entities.
+
 ## Usage
 
 To generate your own diagrams:

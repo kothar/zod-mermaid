@@ -1,9 +1,9 @@
 import { z } from 'zod';
 
 import { SchemaParseError, DiagramGenerationError } from '../errors';
-import { generateMermaidDiagram } from '../mermaid-generator';
+import { generateMermaidDiagram, idRef } from '../mermaid-generator';
 
-describe('generateMermaidDiagram', () => {
+describe('Mermaid Generator', () => {
   const mockSchema = z.object({
     id: z.string(),
     name: z.string(),
@@ -142,6 +142,70 @@ describe('generateMermaidDiagram', () => {
       expect(result).toContain('ApiResponse_success');
       expect(result).toContain('ApiResponse_error');
       expect(result).toContain('Data'); // Nested object should be created
+    });
+  });
+
+  describe('ID References', () => {
+    it('should generate relationships for ID references', () => {
+      const CustomerSchema = z.object({
+        id: z.uuid(),
+        name: z.string(),
+        email: z.email(),
+      }).describe('Customer');
+
+      const ProductSchema = z.object({
+        id: z.uuid(),
+        name: z.string(),
+        price: z.number().positive(),
+      }).describe('Product');
+
+      const OrderSchema = z.object({
+        id: z.uuid(),
+        customerId: idRef('Customer'),
+        productId: idRef('Product'),
+        quantity: z.number().positive(),
+        orderDate: z.date(),
+      }).describe('Order');
+
+      const diagram = generateMermaidDiagram(OrderSchema, { diagramType: 'er' });
+
+      // Should include all entities
+      expect(diagram).toContain('Customer');
+      expect(diagram).toContain('Product');
+      expect(diagram).toContain('Order');
+
+      // Should show ID reference fields with correct types
+      expect(diagram).toContain('string customerId "ref: Customer"');
+      expect(diagram).toContain('string productId "ref: Product"');
+
+      // Should generate relationships with reference style
+      expect(diagram).toContain('Order }o--|| Customer : "customerId"');
+      expect(diagram).toContain('Order }o--|| Product : "productId"');
+    });
+
+    it('should work with optional ID references', () => {
+      const UserSchema = z.object({
+        id: z.uuid(),
+        name: z.string(),
+      }).describe('User');
+
+      const PostSchema = z.object({
+        id: z.uuid(),
+        title: z.string(),
+        content: z.string(),
+        authorId: idRef('User'),
+        editorId: idRef('User').optional(),
+      }).describe('Post');
+
+      const diagram = generateMermaidDiagram(PostSchema, { diagramType: 'er' });
+
+      // Should show both required and optional ID references
+      expect(diagram).toContain('string authorId "ref: User"');
+      expect(diagram).toContain('string editorId "ref: User"');
+
+      // Should generate relationships with reference style and correct cardinality
+      expect(diagram).toContain('Post }o--|| User : "authorId"');
+      expect(diagram).toContain('Post }o--o{ User : "editorId"');
     });
   });
 });

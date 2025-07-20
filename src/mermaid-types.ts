@@ -58,6 +58,14 @@ export interface SchemaField {
   isOptional: boolean;
   validation?: string[];
   description?: string | undefined;
+  /**
+   * Whether this field is an ID reference to another entity
+   */
+  isIdReference?: boolean;
+  /**
+   * The name of the entity this field references (for ID references)
+   */
+  referencedEntity?: string | undefined;
 }
 
 /**

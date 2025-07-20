@@ -3,6 +3,6 @@
  * @module zod-mermaid
  */
 
-export { generateMermaidDiagram } from './mermaid-generator';
+export { generateMermaidDiagram, idRef } from './mermaid-generator';
 export type { MermaidOptions, DiagramType } from './mermaid-types';
 export { ZodMermaidError } from './errors';

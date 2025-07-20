@@ -1,7 +1,27 @@
-import type { z } from 'zod';
-
+import { z } from 'zod';
 import type { MermaidOptions, SchemaEntity } from './mermaid-types';
 import { DiagramGenerationError, SchemaParseError, ZodMermaidError } from './errors';
+
+/**
+ * Creates a string field that references another entity by ID
+ * This allows you to indicate relationships without embedding the full entity
+ * 
+ * @param entityName - The name of the entity this ID references
+ * @returns A Zod string schema with ID reference metadata
+ * 
+ * @example
+ * const OrderSchema = z.object({
+ *   id: z.uuid(),
+ *   customerId: idRef('Customer'), // References Customer entity
+ *   productId: idRef('Product'),   // References Product entity
+ * });
+ */
+export function idRef<T extends string>(entityName: T): z.ZodString {
+  const schema = z.string();
+  // Add metadata to the schema to indicate this is an ID reference
+  (schema as any).__idRef = entityName;
+  return schema;
+}
 
 /**
  * Default options for Mermaid diagram generation
@@ -67,6 +87,7 @@ function parseSchemaToEntities(
   parentFieldName?: string,
 ): SchemaEntity[] {
   const entities: SchemaEntity[] = [];
+  const idReferences = new Set<string>();
 
   // Check if it's an object schema
   if (schema.def.type === 'object') {
@@ -80,12 +101,35 @@ function parseSchemaToEntities(
       const isOptional = isFieldOptional(fieldSchema);
       const validation = getFieldValidation(fieldSchema);
 
+      // Track ID references for placeholder entity creation
+      // Handle both direct ID refs and optional ID refs
+      let isIdRef = false;
+      let referencedEntity: string | undefined = undefined;
+      
+      if (fieldType === 'string' && (fieldSchema as any).__idRef) {
+        isIdRef = true;
+        referencedEntity = (fieldSchema as any).__idRef;
+      } else if (isOptional && fieldSchema.def.type === 'optional') {
+        // For optional fields, check if the unwrapped schema is an ID ref
+        const unwrappedSchema = (fieldSchema as z.ZodOptional<any>).unwrap();
+        if (unwrappedSchema.def.type === 'string' && (unwrappedSchema as any).__idRef) {
+          isIdRef = true;
+          referencedEntity = (unwrappedSchema as any).__idRef;
+        }
+      }
+      
+      if (isIdRef && referencedEntity) {
+        idReferences.add(referencedEntity);
+      }
+
       return {
         name: key,
         type: fieldType,
         isOptional,
         validation,
         description: undefined,
+        isIdReference: isIdRef,
+        referencedEntity,
       };
     });
 
@@ -225,6 +269,20 @@ function parseSchemaToEntities(
     }
   }
 
+  // Add placeholder entities for ID references that aren't in the current schema
+  for (const referencedEntityName of idReferences) {
+    // Check if this entity is already in the entities array
+    const existingEntity = entities.find(e => e.name === referencedEntityName);
+    if (!existingEntity) {
+      // Create a placeholder entity
+      entities.push({
+        name: referencedEntityName,
+        fields: [], // Empty fields for placeholder
+        description: undefined,
+      });
+    }
+  }
+
   return entities;
 }
 
@@ -280,6 +338,11 @@ function getEntityName(
  */
 function getFieldType(schema: z.ZodTypeAny, fieldName: string, entityName: string): string {
   const { type } = schema.def;
+
+  // For ID references, return 'string' - the referenced entity will be in validation
+  if (type === 'string' && (schema as any).__idRef) {
+    return 'string';
+  }
 
   switch (type) {
   case 'string':
@@ -431,6 +494,11 @@ function getFieldValidation(schema: z.ZodTypeAny): string[] {
     const def = schema.def as any;
     const checks = def.checks || [];
 
+    // Check for ID reference metadata
+    if ((schema as any).__idRef) {
+      validations.push(`ref: ${(schema as any).__idRef}`);
+    }
+
     // Check for format-based validations (new Zod 4.x top-level validators)
     if (def.format === 'email') {
       validations.push('email');
@@ -553,7 +621,7 @@ function generateERDiagram(entities: SchemaEntity[], options: Required<MermaidOp
   // Add relationships between entities
   for (const entity of entities) {
     for (const field of entity.fields) {
-      // Check if this field references another entity
+      // Check if this field references another entity (embedded relationship)
       const referencedEntity = entities.find(e => e.name === field.type);
       if (
         referencedEntity &&
@@ -566,6 +634,16 @@ function generateERDiagram(entities: SchemaEntity[], options: Required<MermaidOp
         const relationshipType = field.isOptional ? '||--o{' : '||--||';
         lines.push(
           `    ${entity.name} ${relationshipType} ${referencedEntity.name} : "${field.name}"`,
+        );
+      } else if (
+        // Handle ID references to entities
+        field.isIdReference &&
+        field.referencedEntity
+      ) {
+        // ID reference relationship - use a different line style to indicate reference vs embedding
+        const relationshipType = field.isOptional ? '}o--o{' : '}o--||';
+        lines.push(
+          `    ${entity.name} ${relationshipType} ${field.referencedEntity} : "${field.name}"`,
         );
       }
 
@@ -621,7 +699,7 @@ function generateClassDiagram(entities: SchemaEntity[]): string {
   // Add relationships between classes
   for (const entity of entities) {
     for (const field of entity.fields) {
-      // Check if this field references another entity
+      // Check if this field references another entity (embedded relationship)
       const referencedEntity = entities.find(e => e.name === field.type);
       if (
         referencedEntity &&
@@ -631,9 +709,21 @@ function generateClassDiagram(entities: SchemaEntity[]): string {
         field.type !== 'date' &&
         !field.type.endsWith('[]')
       ) {
-        const relationshipType = field.isOptional ? '-->' : '-->';
+        // Use UML composition notation (diamond) for embedded relationships
+        const relationshipType = field.isOptional ? '*--' : '*--';
         lines.push(
           `    ${entity.name} ${relationshipType} ${referencedEntity.name} : ${field.name}`,
+        );
+      } else if (
+        // Handle ID references to entities
+        field.isIdReference &&
+        field.referencedEntity
+      ) {
+        // ID reference relationship - use a different arrow style for class diagrams
+        // Class diagrams don't support dotted arrows with labels, so use a different approach
+        const relationshipType = field.isOptional ? '-->' : '-->';
+        lines.push(
+          `    ${entity.name} ${relationshipType} ${field.referencedEntity} : ${field.name} (ref)`,
         );
       }
 
@@ -642,8 +732,8 @@ function generateClassDiagram(entities: SchemaEntity[]): string {
         const baseType = field.type.slice(0, -2); // Remove '[]'
         const referencedEntity = entities.find(e => e.name === baseType);
         if (referencedEntity && referencedEntity.name === entity.name) {
-          // Self-referential relationship
-          const relationshipType = field.isOptional ? '-->' : '-->';
+          // Self-referential relationship - use composition notation
+          const relationshipType = field.isOptional ? '*--' : '*--';
           lines.push(`    ${entity.name} ${relationshipType} ${entity.name} : ${field.name}`);
         }
       }
@@ -696,6 +786,11 @@ function generateFlowchartDiagram(entities: SchemaEntity[]): string {
         !field.type.endsWith('[]')
       ) {
         lines.push(`    ${fieldNode} --> ${referencedEntity.name}`);
+      }
+
+      // Handle ID references to entities
+      if (field.isIdReference && field.referencedEntity) {
+        lines.push(`    ${fieldNode} -.-> ${field.referencedEntity}`);
       }
 
       // Handle self-referential connections (arrays of the same entity type)

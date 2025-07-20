@@ -31,7 +31,7 @@ npm install zod-mermaid
 
 ```typescript
 import { z } from 'zod';
-import { generateMermaidDiagram } from 'zod-mermaid';
+import { generateMermaidDiagram, idRef } from 'zod-mermaid';
 
 const UserSchema = z.object({
   id: z.uuid(),
@@ -277,9 +277,9 @@ erDiagram
         string location
     }
     Event ||--|| ProductEventPayload : "data"
-    ProductEventPayload ||--|| ProductEventPayload_addProduct : union
-    ProductEventPayload ||--|| ProductEventPayload_removeProduct : union
-    ProductEventPayload ||--|| ProductEventPayload_updateProduct : union
+    ProductEventPayload ||--|| ProductEventPayload_addProduct : "addProduct"
+    ProductEventPayload ||--|| ProductEventPayload_removeProduct : "removeProduct"
+    ProductEventPayload ||--|| ProductEventPayload_updateProduct : "updateProduct"
 ```
 
 **Class Diagram Output:**
@@ -310,12 +310,108 @@ classDiagram
         +location: string
     }
     Event --> ProductEventPayload : data
-    ProductEventPayload <|-- ProductEventPayload_addProduct : union
-    ProductEventPayload <|-- ProductEventPayload_removeProduct : union
-    ProductEventPayload <|-- ProductEventPayload_updateProduct : union
+    ProductEventPayload <|-- ProductEventPayload_addProduct : addProduct
+    ProductEventPayload <|-- ProductEventPayload_removeProduct : removeProduct
+    ProductEventPayload <|-- ProductEventPayload_updateProduct : updateProduct
 ```
 
-**Note:** Use `.describe()` on your discriminated union and its members to provide meaningful entity names in the diagrams. The library automatically creates separate entities for each union member using their descriptions and shows the relationships between them with the discriminator values as edge labels.
+**Note:** Use `.describe()` on your discriminated union and its members to provide meaningful entity names in the diagrams. The library automatically creates separate entities for each union member using their descriptions and shows the relationships between them with the discriminator field values as edge labels.
+
+### ID References
+
+For cases where you want to reference other entities by ID without embedding their full structure, use the `idRef()` function:
+
+```typescript
+const CustomerSchema = z.object({
+  id: z.uuid(),
+  name: z.string(),
+  email: z.email(),
+}).describe('Customer');
+
+const OrderSchema = z.object({
+  id: z.uuid(),
+  customerId: idRef('Customer'), // References Customer entity
+  productId: idRef('Product'),   // References Product entity
+  quantity: z.number().positive(),
+  orderDate: z.date(),
+}).describe('Order');
+```
+
+**ER Diagram Output:**
+```mermaid
+erDiagram
+    Order {
+        string id "uuid"
+        string customerId "ref: Customer"
+        string productId "ref: Product"
+        number quantity
+        date orderDate
+    }
+    Customer {
+    }
+    Product {
+    }
+    Order }o--|| Customer : "customerId"
+    Order }o--|| Product : "productId"
+```
+
+**Class Diagram Output:**
+```mermaid
+classDiagram
+    class Order {
+        +id: string
+        +customerId: string
+        +productId: string
+        +quantity: number
+        +orderDate: date
+    }
+    class Customer {
+    }
+    class Product {
+    }
+    Order --> Customer : customerId (ref)
+    Order --> Product : productId (ref)
+```
+
+This generates relationships to placeholder entities and shows the field types as `string` with the referenced entity in the validation column. The relationship style differentiates ID references from embedded relationships.
+
+**Note:** For embedded relationships, class diagrams use UML composition notation (`*--`) to indicate that the contained object is part of the containing object's lifecycle.
+
+**Example - Embedded vs Reference Relationships:**
+
+```mermaid
+classDiagram
+    class User {
+        +id: string
+        +name: string
+        +profile: Profile
+        +customerId: string
+    }
+    class Profile {
+        +bio: string
+        +preferences: Preferences
+    }
+    class Preferences {
+        +theme: string
+        +notifications: boolean
+    }
+    class Customer {
+        +id: string
+        +name: string
+    }
+    
+    User *-- Profile : profile
+    Profile *-- Preferences : preferences
+    User --> Customer : customerId (ref)
+```
+
+**Relationship Styles:**
+- **ER Diagrams**: 
+  - `||--||` or `||--o{`: Embedded relationships (full entity structure)
+  - `}o--||` or `}o--o{`: ID reference relationships (string ID references)
+- **Class Diagrams**: 
+  - `*--`: Embedded relationships (UML composition with diamond)
+  - `--> : fieldName (ref)`: ID reference relationships
 
 ## Configuration Options
 
