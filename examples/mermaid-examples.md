@@ -11,7 +11,7 @@ erDiagram
         string id "uuid"
         string name "min: 1, max: 100"
         string email "email"
-        number age
+        number age "positive, max: 120"
         boolean isActive
         date createdAt
         Profile profile
@@ -96,7 +96,7 @@ erDiagram
     Product {
         string id
         string name
-        number price
+        number price "positive"
         string category "enum: electronics, clothing, books"
         boolean inStock
         string[] tags
@@ -354,7 +354,7 @@ erDiagram
         string id "uuid"
         string customerId "ref: Customer, uuid"
         string[] productIds "ref: Product, uuid"
-        number quantity
+        number quantity "positive"
         date orderDate
         string status "enum: pending, shipped, delivered"
     }

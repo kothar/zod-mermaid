@@ -1,7 +1,8 @@
 import { z } from 'zod';
 
 import { SchemaParseError, DiagramGenerationError } from '../errors';
-import { generateMermaidDiagram, idRef } from '../mermaid-generator';
+import { generateMermaidDiagram } from '../mermaid-generator';
+import { idRef } from '../id-ref';
 
 describe('Mermaid Generator', () => {
   const mockSchema = z.object({
@@ -316,7 +317,7 @@ describe('Mermaid Generator', () => {
       // Should include both entities
       expect(diagram).toContain('User {');
       expect(diagram).toContain('UserProfile {');
-      
+
       // Should show the relationship
       expect(diagram).toContain('UserProfile }o--|| User : "userId"');
     });
@@ -356,7 +357,7 @@ describe('Mermaid Generator', () => {
 
     it('should handle empty array of schemas', () => {
       const diagram = generateMermaidDiagram([], { diagramType: 'er' });
-      
+
       // Should generate a valid but empty diagram
       expect(diagram).toBe('erDiagram');
     });

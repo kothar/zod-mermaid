@@ -1,51 +1,6 @@
-import { z } from 'zod';
+import { z, ZodNumber, ZodPipe, ZodUnion } from 'zod';
 import type { MermaidOptions, SchemaEntity } from './mermaid-types';
 import { DiagramGenerationError, SchemaParseError, ZodMermaidError } from './errors';
-
-/**
- * Creates a string field that references another entity by ID
- * This allows you to indicate relationships without embedding the full entity
- *
- * @param schema - The Zod object schema representing the referenced entity
- * @param idFieldName - The name of the ID field in the referenced schema (default: 'id')
- * @param entityName - Optional custom name for the referenced entity
- * @returns A Zod schema for the ID field with reference metadata
- *
- * @example
- * const OrderSchema = z.object({
- *   id: z.uuid(),
- *   customerId: idRef('Customer'), // References Customer entity
- *   productId: idRef('Product'),   // References Product entity
- * });
- */
-export function idRef<T extends z.ZodObject<Record<string, z.ZodTypeAny>>>(
-  schema: T,
-  idFieldName: string = 'id',
-  entityName?: string,
-): z.ZodTypeAny {
-  const { shape } = schema;
-
-  if (!(idFieldName in shape)) {
-    throw new Error(`ID field '${idFieldName}' not found in schema`);
-  }
-
-  // Get the ID field schema
-  const idFieldSchema = shape[idFieldName];
-  if (!idFieldSchema) {
-    throw new Error(`ID field '${idFieldName}' not found in schema`);
-  }
-
-  // Use the provided entity name or the schema description
-  const targetEntityName = entityName || schema.description || 'Unknown';
-
-  // Create a new schema with the same type and validation as the ID field
-  const resultSchema = idFieldSchema.clone();
-
-  // Add metadata to indicate this is an ID reference
-  (resultSchema as any).__idRef = targetEntityName;
-
-  return resultSchema;
-}
 
 /**
  * Default options for Mermaid diagram generation
@@ -186,7 +141,22 @@ function parseSchemaToEntities(
 
     // Recursively parse nested objects and unions
     for (const [key, value] of Object.entries(shape)) {
-      const fieldSchema = value as z.ZodTypeAny;
+      let fieldSchema = value as z.ZodTypeAny;
+      // Unwrap optional, nullable, and default wrappers using type guards
+      let unwrapped = true;
+      while (unwrapped) {
+        unwrapped = false;
+        if (fieldSchema.def.type === 'optional' && 'unwrap' in fieldSchema) {
+          fieldSchema = (fieldSchema as z.ZodOptional<any>).unwrap();
+          unwrapped = true;
+        } else if (fieldSchema.def.type === 'nullable' && 'unwrap' in fieldSchema) {
+          fieldSchema = (fieldSchema as z.ZodNullable<any>).unwrap();
+          unwrapped = true;
+        } else if (fieldSchema.def.type === 'default' && 'unwrap' in fieldSchema) {
+          fieldSchema = (fieldSchema as z.ZodDefault<any>).unwrap();
+          unwrapped = true;
+        }
+      }
       if (fieldSchema.def.type === 'object') {
         const nestedEntities = parseSchemaToEntities(fieldSchema, options, key);
         entities.push(...nestedEntities);
@@ -464,7 +434,7 @@ function getFieldType(schema: z.ZodTypeAny, fieldName: string, entityName: strin
   }
   case 'union': {
     // Handle discriminated unions
-    const unionDef = schema.def as any;
+    const unionDef = (schema as ZodUnion).def as any;
     if (unionDef.discriminator) {
       // For discriminated unions, return the base entity name
       // The actual entity name will be determined during parsing
@@ -476,6 +446,15 @@ function getFieldType(schema: z.ZodTypeAny, fieldName: string, entityName: strin
     }
     // For regular unions, return a generic union type
     return 'union';
+  }
+  case 'pipe': {
+    // Zod v4 preprocess, transform, refinement, and effects types are all ZodEffects with type 'pipe'
+    // The 'out' property of the definition contains the output schema
+    const pipeDef = (schema as ZodPipe).def as any;
+    if (pipeDef.out) {
+      return getFieldType(pipeDef.out, fieldName, entityName);
+    }
+    return 'unknown';
   }
   default:
     return 'unknown';
@@ -532,6 +511,11 @@ function getFieldValidation(schema: z.ZodTypeAny): string[] {
             ? (schema as z.ZodDefault<any>).unwrap()
             : (schema as z.ZodLazy<any>).unwrap();
     return getFieldValidation(unwrappedSchema);
+  }
+
+  // Handle wrapped types (pipe/preprocess/transform)
+  if (type === 'pipe' && (schema as any).out) {
+    return getFieldValidation((schema as any).out);
   }
 
   // Handle arrays
@@ -591,26 +575,16 @@ function getFieldValidation(schema: z.ZodTypeAny): string[] {
 
   // Check for number validations
   if (type === 'number') {
-    const checks = (schema.def as any).checks || [];
-
-    // Check for positive validation
-    if (
-      checks.some(
-        (check: any) => check.constructor.name === '$ZodCheckGreaterThan' && check.value === 0,
-      )
-    ) {
-      validations.push('positive');
+    const num = schema as z.ZodNumber;
+    if (typeof num.minValue === 'number' && Number.isFinite(num.minValue) && num.minValue !== -Infinity) {
+      if (num.minValue === 0) {
+        validations.push('positive');
+      } else {
+        validations.push(`min: ${num.minValue}`);
+      }
     }
-
-    // Check for min/max values
-    const minCheck = checks.find((check: any) => check.constructor.name === '$ZodCheckGreaterThan');
-    const maxCheck = checks.find((check: any) => check.constructor.name === '$ZodCheckLessThan');
-
-    if (minCheck && minCheck.value !== undefined && minCheck.value !== 0) {
-      validations.push(`min: ${minCheck.value}`);
-    }
-    if (maxCheck && maxCheck.value !== undefined) {
-      validations.push(`max: ${maxCheck.value}`);
+    if (typeof num.maxValue === 'number' && Number.isFinite(num.maxValue)) {
+      validations.push(`max: ${num.maxValue}`);
     }
   }
 
@@ -649,7 +623,7 @@ function generateERDiagram(entities: SchemaEntity[], options: Required<MermaidOp
 
     for (const field of entity.fields) {
       let fieldType = field.type;
-      let validation = field.validation || [];
+      const validation = field.validation || [];
 
       // Handle record types specially for ER diagrams
       if (fieldType.startsWith('Record<') && fieldType.endsWith('>')) {
@@ -657,7 +631,7 @@ function generateERDiagram(entities: SchemaEntity[], options: Required<MermaidOp
         const genericParams = fieldType.slice(7, -1); // Remove 'Record<' and '>'
         const escapedParams = genericParams.replace(/</g, '&lt;').replace(/>/g, '&gt;');
         fieldType = 'Record';
-        validation = [`&lt;${escapedParams}&gt;`];
+        validation.unshift(`&lt;${escapedParams}&gt;`);
       }
 
       const fieldLine = `        ${fieldType} ${field.name}`;

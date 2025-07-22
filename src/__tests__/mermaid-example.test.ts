@@ -3,7 +3,8 @@ import { join } from 'path';
 
 import { z } from 'zod';
 
-import { generateMermaidDiagram, idRef } from '../mermaid-generator';
+import { generateMermaidDiagram } from '../mermaid-generator';
+import { idRef } from '../id-ref';
 
 describe('Mermaid Example Generation', () => {
   it('should generate example diagrams and save to markdown', () => {
