@@ -1,13 +1,15 @@
 import { z } from 'zod';
 
 /**
- * Creates a field that references another entity by ID, inferring the type from the referenced schema's id field.
+ * Creates a field that references another entity by ID, inferring the type from the referenced
+ * schema's id field.
  * This allows you to indicate relationships without embedding the full entity.
  *
  * @param schema - The Zod object schema representing the referenced entity
  * @param idFieldName - The name of the ID field in the referenced schema (default: 'id')
  * @param entityName - Optional custom name for the referenced entity
- * @returns A Zod schema for the ID field with reference metadata, with the type inferred from the referenced schema
+ * @returns A Zod schema for the ID field with reference metadata, with the type inferred from
+ * the referenced schema
  *
  * @example
  * import { z } from 'zod';
@@ -27,7 +29,7 @@ export function idRef<
   idFieldName?: K,
   entityName?: string,
 ): T['shape'][K] {
-  const shape = schema.shape;
+  const { shape } = schema;
   const field = idFieldName ?? 'id';
 
   if (!(field in shape)) {
@@ -50,4 +52,4 @@ export function idRef<
   (resultSchema as any).__idRef = targetEntityName;
 
   return resultSchema as T['shape'][K];
-} 
+}

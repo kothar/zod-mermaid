@@ -1,4 +1,4 @@
-import { z, ZodNumber, ZodPipe, ZodUnion } from 'zod';
+import { z, ZodNumber } from 'zod';
 import type { MermaidOptions, SchemaEntity } from './mermaid-types';
 import { DiagramGenerationError, SchemaParseError, ZodMermaidError } from './errors';
 
@@ -434,7 +434,7 @@ function getFieldType(schema: z.ZodTypeAny, fieldName: string, entityName: strin
   }
   case 'union': {
     // Handle discriminated unions
-    const unionDef = (schema as ZodUnion).def as any;
+    const unionDef = schema.def as any;
     if (unionDef.discriminator) {
       // For discriminated unions, return the base entity name
       // The actual entity name will be determined during parsing
@@ -448,9 +448,10 @@ function getFieldType(schema: z.ZodTypeAny, fieldName: string, entityName: strin
     return 'union';
   }
   case 'pipe': {
-    // Zod v4 preprocess, transform, refinement, and effects types are all ZodEffects with type 'pipe'
+    // Zod v4 preprocess, transform, refinement, and effects types are all ZodEffects with
+    // type 'pipe'
     // The 'out' property of the definition contains the output schema
-    const pipeDef = (schema as ZodPipe).def as any;
+    const pipeDef = schema.def as any;
     if (pipeDef.out) {
       return getFieldType(pipeDef.out, fieldName, entityName);
     }
@@ -575,7 +576,7 @@ function getFieldValidation(schema: z.ZodTypeAny): string[] {
 
   // Check for number validations
   if (type === 'number') {
-    const num = schema as z.ZodNumber;
+    const num = schema as ZodNumber;
     if (typeof num.minValue === 'number' && Number.isFinite(num.minValue) && num.minValue !== -Infinity) {
       if (num.minValue === 0) {
         validations.push('positive');
