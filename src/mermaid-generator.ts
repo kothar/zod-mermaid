@@ -201,11 +201,21 @@ function parseSchemaToEntities(
           const lazySchema = fieldSchema as z.ZodLazy<any>;
           const resolvedSchema = lazySchema.unwrap();
           if (resolvedSchema.def.type === 'object') {
-            const nestedEntities = parseSchemaToEntities(resolvedSchema, options, registry, key);
+            const nestedEntities = parseSchemaToEntities(
+              resolvedSchema,
+              options,
+              registry,
+              key,
+            );
             entities.push(...nestedEntities);
           } else if (resolvedSchema.def.type === 'union' && (resolvedSchema.def as any).discriminator) {
             // Handle discriminated unions in lazy types
-            const nestedEntities = parseSchemaToEntities(resolvedSchema, options, registry, key);
+            const nestedEntities = parseSchemaToEntities(
+              resolvedSchema,
+              options,
+              registry,
+              key,
+            );
             entities.push(...nestedEntities);
           }
         } catch {
@@ -226,7 +236,10 @@ function parseSchemaToEntities(
     // Extract discriminator values
     const discriminatorValues = unionOptions.map((opt: any) => {
       const optionDef = opt.def as any;
-      return optionDef.shape[discriminator].def.values[0];
+      const discField = optionDef.shape[discriminator];
+      const values: unknown[] = (discField?.def?.values ?? []) as unknown[];
+      const [first] = values;
+      return first as string;
     });
 
     // Add discriminator field to the base entity
@@ -257,7 +270,9 @@ function parseSchemaToEntities(
 
       if (optionSchema.def.type === 'object') {
         const optionDef = optionSchema.def as any;
-        const [discriminatorValue] = optionDef.shape[discriminator].def.values;
+        const discriminatorField = optionDef.shape[discriminator];
+        const values = (discriminatorField?.def?.values ?? []) as string[];
+        const [discriminatorValue] = values;
 
         // Use the schema description if available, otherwise fall back to the generic naming
         const optionEntityName = optionSchema.description || `${unionEntityName}_${discriminatorValue}`;
@@ -304,7 +319,12 @@ function parseSchemaToEntities(
               const lazySchema = fieldSchema as z.ZodLazy<any>;
               const resolvedSchema = lazySchema.unwrap();
               if (resolvedSchema.def.type === 'object') {
-                const nestedEntities = parseSchemaToEntities(resolvedSchema, options, registry, key);
+                const nestedEntities = parseSchemaToEntities(
+                  resolvedSchema,
+                  options,
+                  registry,
+                  key,
+                );
                 entities.push(...nestedEntities);
               }
             } catch {
@@ -774,7 +794,11 @@ function generateERDiagram(
           // Single ID reference - use "many-to-one" relationship
           relationshipType = field.isOptional ? '}o--o{' : '}o--||';
         }
-        const target = findEntityByNameAndBrand(entities, field.referencedEntity, field.referencedBrandKey);
+        const target = findEntityByNameAndBrand(
+          entities,
+          field.referencedEntity,
+          field.referencedBrandKey,
+        );
         const targetName = target?.name ?? field.referencedEntity;
         lines.push(
           `    ${entity.name} ${relationshipType} ${targetName} : "${field.name}"`,
@@ -929,7 +953,9 @@ function generateFlowchartDiagram(entities: SchemaEntity[]): string {
   // Add field nodes and their connections to parent entities
   for (const entity of entities) {
     for (const field of entity.fields) {
-      const label = field.description ? `${field.name}: ${field.type}\\n${field.description}` : `${field.name}: ${field.type}`;
+      const label = field.description
+        ? `${field.name}: ${field.type}\\n${field.description}`
+        : `${field.name}: ${field.type}`;
       const fieldNode = `${entity.name}_${field.name}["${label}"]`;
       lines.push(`    ${fieldNode}`);
       lines.push(`    ${entity.name} --> ${fieldNode}`);
