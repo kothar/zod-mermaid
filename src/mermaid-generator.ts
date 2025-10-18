@@ -703,7 +703,10 @@ function getFieldValidation(schema: z.ZodTypeAny): string[] {
  * @param options - Diagram options
  * @returns ER diagram string
  */
-function generateERDiagram(entities: SchemaEntity[], options: Required<MermaidOptions>): string {
+function generateERDiagram(
+  entities: SchemaEntity[],
+  options: Required<Omit<MermaidOptions, 'metadataRegistry'>> & { metadataRegistry?: unknown },
+): string {
   const lines: string[] = ['erDiagram'];
 
   // Add entity definitions

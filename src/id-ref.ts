@@ -1,5 +1,4 @@
 import { z } from 'zod';
-import type { MetadataRegistry } from './mermaid-types';
 
 /**
  * Creates a field that references another entity by ID, inferring the type from the referenced

@@ -7,7 +7,7 @@ This document contains example Mermaid diagrams generated from Zod schemas using
 ### Entity-Relationship Diagram
 ```mermaid
 erDiagram
-    User {
+    User { "User"
         string id "uuid"
         string name "min: 1, max: 100"
         string email "email"
@@ -93,7 +93,7 @@ flowchart TD
 ### Entity-Relationship Diagram
 ```mermaid
 erDiagram
-    Product {
+    Product { "Product"
         string id
         string name
         number price "positive"
@@ -109,7 +109,7 @@ erDiagram
 ### Entity-Relationship Diagram
 ```mermaid
 erDiagram
-    Directory {
+    Directory { "Directory"
         string name
         string path
         boolean isDirectory
@@ -161,7 +161,7 @@ erDiagram
     ApiResponse {
         string status "enum: success, error"
     }
-    ApiResponse_Success {
+    ApiResponse_Success { "ApiResponse_Success"
         Data data
         date timestamp
     }
@@ -170,7 +170,7 @@ erDiagram
         string name
         string email "email"
     }
-    ApiResponse_Error {
+    ApiResponse_Error { "ApiResponse_Error"
         string message
         number code
         Details details
@@ -240,25 +240,25 @@ flowchart TD
 ### Entity-Relationship Diagram
 ```mermaid
 erDiagram
-    Event {
+    Event { "Event"
         string id
         string type "literal: com.example.event.product"
         date date
-        ProductEventPayload data
+        ProductEventPayload data "ProductEventPayload"
     }
     ProductEventPayload {
         string eventType "enum: addProduct, removeProduct, updateProduct"
     }
-    AddProductEvent {
+    AddProductEvent { "AddProductEvent"
         string id "uuid"
         string name
         string description
         string location
     }
-    RemoveProductEvent {
+    RemoveProductEvent { "RemoveProductEvent"
         string id "uuid"
     }
-    UpdateProductEvent {
+    UpdateProductEvent { "UpdateProductEvent"
         string id "uuid"
         string name
         string description
@@ -277,7 +277,7 @@ classDiagram
         +id: string
         +type: string
         +date: date
-        +data: ProductEventPayload
+        +data: ProductEventPayload // ProductEventPayload
     }
     class ProductEventPayload {
         +eventType: string
@@ -317,9 +317,9 @@ flowchart TD
     Event --> Event_type["type: string"]
     Event_date["date: date"]
     Event --> Event_date["date: date"]
-    Event_data["data: ProductEventPayload"]
-    Event --> Event_data["data: ProductEventPayload"]
-    Event_data["data: ProductEventPayload"] --> ProductEventPayload
+    Event_data["data: ProductEventPayload\nProductEventPayload"]
+    Event --> Event_data["data: ProductEventPayload\nProductEventPayload"]
+    Event_data["data: ProductEventPayload\nProductEventPayload"] --> ProductEventPayload
     ProductEventPayload_eventType["eventType: string"]
     ProductEventPayload --> ProductEventPayload_eventType["eventType: string"]
     AddProductEvent_id["id: string"]
@@ -350,7 +350,7 @@ flowchart TD
 ### Entity-Relationship Diagram
 ```mermaid
 erDiagram
-    Order {
+    Order { "Order"
         string id "uuid"
         string customerId "ref: Customer, uuid"
         string[] productIds "ref: Product, uuid"
