@@ -7,7 +7,7 @@ This document contains example Mermaid diagrams generated from Zod schemas using
 ### Entity-Relationship Diagram
 ```mermaid
 erDiagram
-    User { "User"
+    User {
         string id "uuid"
         string name "min: 1, max: 100"
         string email "email"
@@ -93,7 +93,7 @@ flowchart TD
 ### Entity-Relationship Diagram
 ```mermaid
 erDiagram
-    Product { "Product"
+    Product {
         string id
         string name
         number price "positive"
@@ -109,7 +109,7 @@ erDiagram
 ### Entity-Relationship Diagram
 ```mermaid
 erDiagram
-    Directory { "Directory"
+    Directory {
         string name
         string path
         boolean isDirectory
@@ -161,7 +161,7 @@ erDiagram
     ApiResponse {
         string status "enum: success, error"
     }
-    ApiResponse_Success { "ApiResponse_Success"
+    ApiResponse_Success {
         Data data
         date timestamp
     }
@@ -170,7 +170,7 @@ erDiagram
         string name
         string email "email"
     }
-    ApiResponse_Error { "ApiResponse_Error"
+    ApiResponse_Error {
         string message
         number code
         Details details
@@ -240,7 +240,7 @@ flowchart TD
 ### Entity-Relationship Diagram
 ```mermaid
 erDiagram
-    Event { "Event"
+    Event {
         string id
         string type "literal: com.example.event.product"
         date date
@@ -249,16 +249,16 @@ erDiagram
     ProductEventPayload {
         string eventType "enum: addProduct, removeProduct, updateProduct"
     }
-    AddProductEvent { "AddProductEvent"
+    AddProductEvent {
         string id "uuid"
         string name
         string description
         string location
     }
-    RemoveProductEvent { "RemoveProductEvent"
+    RemoveProductEvent {
         string id "uuid"
     }
-    UpdateProductEvent { "UpdateProductEvent"
+    UpdateProductEvent {
         string id "uuid"
         string name
         string description
@@ -350,17 +350,13 @@ flowchart TD
 ### Entity-Relationship Diagram
 ```mermaid
 erDiagram
-    Order { "Order"
+    Order {
         string id "uuid"
         string customerId "ref: Customer, uuid"
         string[] productIds "ref: Product, uuid"
         number quantity "positive"
         date orderDate
         string status "enum: pending, shipped, delivered"
-    }
-    Customer {
-    }
-    Product {
     }
     Order }o--|| Customer : "customerId"
     Order }o--o{ Product : "productIds"

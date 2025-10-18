@@ -1,4 +1,4 @@
-# Cursor Rules for Zod Mermaid TypeScript Library
+# Agent Rules for Zod Mermaid TypeScript Library
 
 ## Project Overview
 This is a TypeScript library for working with Zod schemas and Mermaid diagrams. The project follows strict coding standards and comprehensive type safety.

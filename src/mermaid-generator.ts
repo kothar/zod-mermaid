@@ -89,6 +89,18 @@ function parseSchemaToEntities(
   const entities: SchemaEntity[] = [];
   const idReferences = new Set<string>();
 
+  // Handle top-level lazy schemas by unwrapping before proceeding
+  if (schema.def.type === 'lazy') {
+    try {
+      const lazySchema = schema as z.ZodLazy<any>;
+      const resolvedSchema = lazySchema.unwrap();
+      return parseSchemaToEntities(resolvedSchema, options, registry, parentFieldName);
+    } catch {
+      // If unable to resolve, return empty entities
+      return entities;
+    }
+  }
+
   // Check if it's an object schema
   if (schema.def.type === 'object') {
     const objectSchema = schema as z.ZodObject<Record<string, z.ZodTypeAny>>;
@@ -342,10 +354,11 @@ function parseSchemaToEntities(
     // Check if this entity is already in the entities array
     const existingEntity = entities.find(e => e.name === referencedEntityName);
     if (!existingEntity) {
-      // Create a placeholder entity
+      // Create a placeholder entity with no fields
+      // The entity references are shown in the relationships section
       entities.push({
         name: referencedEntityName,
-        fields: [], // Empty fields for placeholder
+        fields: [],
         description: undefined,
       });
     }
@@ -732,8 +745,12 @@ function generateERDiagram(
 
   // Add entity definitions
   for (const entity of entities) {
-    const entityHeaderDescription = entity.description ? ` "${entity.description}"` : '';
-    lines.push(`    ${entity.name} {${entityHeaderDescription}`);
+    // Skip empty placeholder entities in ER diagrams - they will still appear through relationships
+    if (entity.fields.length === 0) {
+      continue;
+    }
+
+    lines.push(`    ${entity.name} {`);
 
     for (const field of entity.fields) {
       let fieldType = field.type;
