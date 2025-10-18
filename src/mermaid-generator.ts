@@ -271,8 +271,9 @@ function parseSchemaToEntities(
       if (optionSchema.def.type === 'object') {
         const optionDef = optionSchema.def as any;
         const discriminatorField = optionDef.shape[discriminator];
-        const values = (discriminatorField?.def?.values ?? []) as string[];
-        const [discriminatorValue] = values;
+        const values = (discriminatorField?.def?.values ?? []) as unknown[];
+        const [rawValue] = values;
+        const discriminatorValue: string = String(rawValue ?? '');
 
         // Use the schema description if available, otherwise fall back to the generic naming
         const optionEntityName = optionSchema.description || `${unionEntityName}_${discriminatorValue}`;
