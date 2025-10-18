@@ -6,7 +6,7 @@ import { idRef } from '../id-ref';
 
 describe('Mermaid Generator', () => {
   const mockSchema = z.object({
-    id: z.string(),
+    id: z.string().brand('EntityId'),
     name: z.string(),
     email: z.email(),
     age: z.number().min(0).max(120),
@@ -149,19 +149,19 @@ describe('Mermaid Generator', () => {
   describe('ID References', () => {
     it('should generate relationships for ID references', () => {
       const CustomerSchema = z.object({
-        id: z.uuid(),
+        id: z.string().brand('CustomerId'),
         name: z.string(),
         email: z.email(),
       }).describe('Customer');
 
       const ProductSchema = z.object({
-        id: z.uuid(),
+        id: z.string().brand('ProductId'),
         name: z.string(),
         price: z.number().positive(),
       }).describe('Product');
 
       const OrderSchema = z.object({
-        id: z.uuid(),
+        id: z.string().brand('OrderId'),
         customerId: idRef(CustomerSchema),
         productId: idRef(ProductSchema),
         quantity: z.number().positive(),
@@ -176,8 +176,8 @@ describe('Mermaid Generator', () => {
       expect(diagram).toContain('Order');
 
       // Should show ID reference fields with correct types
-      expect(diagram).toContain('string customerId "ref: Customer, uuid"');
-      expect(diagram).toContain('string productId "ref: Product, uuid"');
+      expect(diagram).toContain('string customerId "ref: Customer"');
+      expect(diagram).toContain('string productId "ref: Product"');
 
       // Should generate relationships with reference style
       expect(diagram).toContain('Order }o--|| Customer : "customerId"');
@@ -186,12 +186,12 @@ describe('Mermaid Generator', () => {
 
     it('should work with optional ID references', () => {
       const UserSchema = z.object({
-        id: z.uuid(),
+        id: z.string().brand('UserId'),
         name: z.string(),
       }).describe('User');
 
       const PostSchema = z.object({
-        id: z.uuid(),
+        id: z.string().brand('PostId'),
         title: z.string(),
         content: z.string(),
         authorId: idRef(UserSchema),
@@ -201,8 +201,8 @@ describe('Mermaid Generator', () => {
       const diagram = generateMermaidDiagram(PostSchema, { diagramType: 'er' });
 
       // Should show both required and optional ID references
-      expect(diagram).toContain('string authorId "ref: User, uuid"');
-      expect(diagram).toContain('string editorId "ref: User, uuid"');
+      expect(diagram).toContain('string authorId "ref: User"');
+      expect(diagram).toContain('string editorId "ref: User"');
 
       // Should generate relationships with reference style and correct cardinality
       expect(diagram).toContain('Post }o--|| User : "authorId"');
@@ -211,18 +211,18 @@ describe('Mermaid Generator', () => {
 
     it('should work with arrays of ID references', () => {
       const UserSchema = z.object({
-        id: z.uuid(),
+        id: z.string().brand('UserId'),
         name: z.string(),
       }).describe('User');
 
       const ProductSchema = z.object({
-        id: z.uuid(),
+        id: z.string().brand('ProductId'),
         name: z.string(),
         price: z.number().positive(),
       }).describe('Product');
 
       const OrderSchema = z.object({
-        id: z.uuid(),
+        id: z.string().brand('OrderId'),
         customerId: idRef(UserSchema),
         productIds: z.array(idRef(ProductSchema)),
         quantity: z.number().positive(),
@@ -231,8 +231,8 @@ describe('Mermaid Generator', () => {
       const diagram = generateMermaidDiagram(OrderSchema, { diagramType: 'er' });
 
       // Should show ID reference fields with correct types
-      expect(diagram).toContain('string customerId "ref: User, uuid"');
-      expect(diagram).toContain('string[] productIds "ref: Product, uuid"');
+      expect(diagram).toContain('string customerId "ref: User"');
+      expect(diagram).toContain('string[] productIds "ref: Product"');
 
       // Should generate relationships with reference style
       expect(diagram).toContain('Order }o--|| User : "customerId"');
@@ -243,20 +243,20 @@ describe('Mermaid Generator', () => {
   describe('multiple schemas', () => {
     it('should generate diagrams from an array of schemas', () => {
       const UserSchema = z.object({
-        id: z.uuid(),
+        id: z.string().brand('UserId'),
         name: z.string(),
         email: z.email(),
       }).describe('User');
 
       const ProductSchema = z.object({
-        id: z.uuid(),
+        id: z.string().brand('ProductId'),
         name: z.string(),
         price: z.number().positive(),
         category: z.enum(['electronics', 'clothing', 'books']),
       }).describe('Product');
 
       const OrderSchema = z.object({
-        id: z.uuid(),
+        id: z.string().brand('OrderId'),
         customerId: idRef(UserSchema),
         productId: idRef(ProductSchema),
         quantity: z.number().positive(),

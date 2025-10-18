@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import type { MetadataRegistry } from './mermaid-types';
 
 /**
  * Creates a field that references another entity by ID, inferring the type from the referenced
@@ -50,6 +51,13 @@ export function idRef<
 
   // Add metadata to indicate this is an ID reference
   (resultSchema as any).__idRef = targetEntityName;
+
+  // Capture brand information (Zod 4 brand) if present on the ID field
+  // This is used to disambiguate references when entity names collide
+  const idDef: any = (idFieldSchema as any).def;
+  if (idDef && Array.isArray(idDef.branding) && idDef.branding.length > 0) {
+    (resultSchema as any).__idBranding = idDef.branding.slice();
+  }
 
   return resultSchema as T['shape'][K];
 }

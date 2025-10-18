@@ -1,11 +1,11 @@
 import { z, ZodNumber } from 'zod';
-import type { MermaidOptions, SchemaEntity } from './mermaid-types';
+import type { MermaidOptions, SchemaEntity, SchemaMetadata, MetadataRegistry } from './mermaid-types';
 import { DiagramGenerationError, SchemaParseError, ZodMermaidError } from './errors';
 
 /**
  * Default options for Mermaid diagram generation
  */
-const DEFAULT_OPTIONS: Required<MermaidOptions> = {
+const DEFAULT_OPTIONS: Required<Omit<MermaidOptions, 'metadataRegistry'>> & Pick<MermaidOptions, 'metadataRegistry'> = {
   diagramType: 'er',
   includeValidation: true,
   includeOptional: true,
@@ -14,7 +14,24 @@ const DEFAULT_OPTIONS: Required<MermaidOptions> = {
     primaryColor: '#4CAF50',
     secondaryColor: '#2196F3',
   },
+  metadataRegistry: undefined,
 };
+
+// Simple global metadata registry (fallback) using WeakMap keyed by schema instances
+const globalMetadataRegistry: MetadataRegistry = (() => {
+  const map = new WeakMap<z.ZodTypeAny, SchemaMetadata>();
+  return {
+    get: (schema: z.ZodTypeAny) => map.get(schema),
+    set: (schema: z.ZodTypeAny, metadata: SchemaMetadata) => {
+      map.set(schema, metadata);
+    },
+    clear: () => map.clear(),
+  };
+})();
+
+export function getGlobalMetadataRegistry(): MetadataRegistry {
+  return globalMetadataRegistry;
+}
 
 /**
  * Generates a Mermaid diagram from one or more Zod schemas
@@ -30,7 +47,11 @@ export function generateMermaidDiagram(
   options: MermaidOptions = {},
 ): string {
   try {
-    const mergedOptions = { ...DEFAULT_OPTIONS, ...options };
+    const mergedOptions: Required<Omit<MermaidOptions, 'metadataRegistry'>> & { metadataRegistry?: MetadataRegistry } = {
+      ...DEFAULT_OPTIONS,
+      ...options,
+    } as any;
+    const registry = mergedOptions.metadataRegistry ?? globalMetadataRegistry;
 
     // Handle both single schema and array of schemas
     const schemas = Array.isArray(schema) ? schema : [schema];
@@ -38,7 +59,7 @@ export function generateMermaidDiagram(
 
     // Parse each schema and collect all entities
     for (const singleSchema of schemas) {
-      const entities = parseSchemaToEntities(singleSchema, mergedOptions);
+      const entities = parseSchemaToEntities(singleSchema, mergedOptions, registry);
       allEntities.push(...entities);
     }
 
@@ -75,7 +96,8 @@ export function generateMermaidDiagram(
  */
 function parseSchemaToEntities(
   schema: z.ZodTypeAny,
-  options: Required<MermaidOptions>,
+  options: Required<Omit<MermaidOptions, 'metadataRegistry'>> & { metadataRegistry?: MetadataRegistry },
+  registry: MetadataRegistry,
   parentFieldName?: string,
 ): SchemaEntity[] {
   const entities: SchemaEntity[] = [];
@@ -85,28 +107,48 @@ function parseSchemaToEntities(
   if (schema.def.type === 'object') {
     const objectSchema = schema as z.ZodObject<Record<string, z.ZodTypeAny>>;
     const { shape } = objectSchema;
-    const entityName = getEntityName(schema, options, parentFieldName);
+    const entityName = getEntityName(schema, options, registry, parentFieldName);
+
+    // Resolve brand key for ID field if present to help disambiguate entities with same name
+    const schemaMeta = registry.get(schema);
+    const idFieldName = schemaMeta?.idFieldName ?? 'id';
+    let idBrandKey: unknown = undefined;
+    if (shape && (idFieldName in shape)) {
+      const idFieldSchema = (shape as any)[idFieldName] as z.ZodTypeAny;
+      idBrandKey = getStringBrandKey(idFieldSchema);
+      // Fallback to any internal branding array if present
+      const idDef: any = (idFieldSchema as any).def ?? (idFieldSchema as any)._def;
+      if (!idBrandKey && idDef && (idDef.brand || idDef.branding)) {
+        idBrandKey = idDef.brand ?? idDef.branding;
+      }
+    }
 
     const fields = Object.entries(shape).map(([key, value]) => {
       const fieldSchema = value as z.ZodTypeAny;
       const fieldType = getFieldType(fieldSchema, key, entityName);
       const isOptional = isFieldOptional(fieldSchema);
       const validation = getFieldValidation(fieldSchema);
+      const fieldDescription = getFieldDescription(fieldSchema, registry, schema, key);
 
       // Track ID references for placeholder entity creation
       // Handle direct ID refs, optional ID refs, and arrays of ID refs
       let isIdRef = false;
       let referencedEntity: string | undefined = undefined;
+      let referencedBrandKey: unknown = undefined;
 
       if (fieldType === 'string' && (fieldSchema as any).__idRef) {
         isIdRef = true;
         referencedEntity = (fieldSchema as any).__idRef;
+        referencedBrandKey =
+          (fieldSchema as any).__idBranding ?? getStringBrandKey(fieldSchema);
       } else if (isOptional && fieldSchema.def.type === 'optional') {
         // For optional fields, check if the unwrapped schema is an ID ref
         const unwrappedSchema = (fieldSchema as z.ZodOptional<any>).unwrap();
         if (unwrappedSchema.def.type === 'string' && (unwrappedSchema as any).__idRef) {
           isIdRef = true;
           referencedEntity = (unwrappedSchema as any).__idRef;
+          referencedBrandKey =
+            (unwrappedSchema as any).__idBranding ?? getStringBrandKey(unwrappedSchema);
         }
       } else if (fieldSchema.def.type === 'array') {
         // For arrays, check if the element is an ID ref
@@ -115,6 +157,8 @@ function parseSchemaToEntities(
         if (elementSchema.def.type === 'string' && (elementSchema as any).__idRef) {
           isIdRef = true;
           referencedEntity = (elementSchema as any).__idRef;
+          referencedBrandKey =
+            (elementSchema as any).__idBranding ?? getStringBrandKey(elementSchema);
         }
       }
 
@@ -127,16 +171,18 @@ function parseSchemaToEntities(
         type: fieldType,
         isOptional,
         validation,
-        description: undefined,
+        description: fieldDescription,
         isIdReference: isIdRef,
         referencedEntity,
+        referencedBrandKey,
       };
     });
 
     entities.push({
       name: entityName,
       fields,
-      description: undefined,
+      description: getEntityDescription(schema, registry),
+      idBrandKey,
     });
 
     // Recursively parse nested objects and unions
@@ -158,11 +204,11 @@ function parseSchemaToEntities(
         }
       }
       if (fieldSchema.def.type === 'object') {
-        const nestedEntities = parseSchemaToEntities(fieldSchema, options, key);
+        const nestedEntities = parseSchemaToEntities(fieldSchema, options, registry, key);
         entities.push(...nestedEntities);
       } else if (fieldSchema.def.type === 'union' && (fieldSchema.def as any).discriminator) {
         // Handle discriminated unions as nested fields
-        const nestedEntities = parseSchemaToEntities(fieldSchema, options, key);
+        const nestedEntities = parseSchemaToEntities(fieldSchema, options, registry, key);
         entities.push(...nestedEntities);
       } else if (fieldSchema.def.type === 'lazy') {
         // Handle lazy types that might contain objects
@@ -170,11 +216,11 @@ function parseSchemaToEntities(
           const lazySchema = fieldSchema as z.ZodLazy<any>;
           const resolvedSchema = lazySchema.unwrap();
           if (resolvedSchema.def.type === 'object') {
-            const nestedEntities = parseSchemaToEntities(resolvedSchema, options, key);
+            const nestedEntities = parseSchemaToEntities(resolvedSchema, options, registry, key);
             entities.push(...nestedEntities);
           } else if (resolvedSchema.def.type === 'union' && (resolvedSchema.def as any).discriminator) {
             // Handle discriminated unions in lazy types
-            const nestedEntities = parseSchemaToEntities(resolvedSchema, options, key);
+            const nestedEntities = parseSchemaToEntities(resolvedSchema, options, registry, key);
             entities.push(...nestedEntities);
           }
         } catch {
@@ -190,7 +236,7 @@ function parseSchemaToEntities(
     const { options: unionOptions, discriminator } = unionDef;
 
     // Create a base entity for the union
-    const unionEntityName = getEntityName(schema, options, parentFieldName);
+    const unionEntityName = getEntityName(schema, options, registry, parentFieldName);
 
     // Extract discriminator values
     const discriminatorValues = unionOptions.map((opt: any) => {
@@ -239,20 +285,21 @@ function parseSchemaToEntities(
             const fieldType = getFieldType(fieldSchema, key, optionEntityName);
             const isOptional = isFieldOptional(fieldSchema);
             const validation = getFieldValidation(fieldSchema);
+            const fieldDescription = getFieldDescription(fieldSchema, registry, optionSchema, key);
 
             return {
               name: key,
               type: fieldType,
               isOptional,
               validation,
-              description: undefined,
+              description: fieldDescription,
             };
           });
 
         entities.push({
           name: optionEntityName,
           fields: optionFields,
-          description: undefined,
+          description: getEntityDescription(optionSchema, registry),
         });
 
         // Add to union subtypes tracking with discriminator value
@@ -264,7 +311,7 @@ function parseSchemaToEntities(
 
           const fieldSchema = value as z.ZodTypeAny;
           if (fieldSchema.def.type === 'object') {
-            const nestedEntities = parseSchemaToEntities(fieldSchema, options, key);
+            const nestedEntities = parseSchemaToEntities(fieldSchema, options, registry, key);
             entities.push(...nestedEntities);
           } else if (fieldSchema.def.type === 'lazy') {
             // Handle lazy types that might contain objects
@@ -272,7 +319,7 @@ function parseSchemaToEntities(
               const lazySchema = fieldSchema as z.ZodLazy<any>;
               const resolvedSchema = lazySchema.unwrap();
               if (resolvedSchema.def.type === 'object') {
-                const nestedEntities = parseSchemaToEntities(resolvedSchema, options, key);
+                const nestedEntities = parseSchemaToEntities(resolvedSchema, options, registry, key);
                 entities.push(...nestedEntities);
               }
             } catch {
@@ -310,13 +357,14 @@ function parseSchemaToEntities(
  */
 function getEntityName(
   schema: z.ZodTypeAny,
-  options: Required<MermaidOptions>,
+  options: Required<Omit<MermaidOptions, 'metadataRegistry'>> & { metadataRegistry?: MetadataRegistry },
+  registry: MetadataRegistry,
   parentFieldName?: string,
 ): string {
   // Try to get name from schema metadata or use a default
-  if (schema.description) {
-    return schema.description;
-  }
+  const meta = registry.get(schema);
+  if (meta?.entityName) return meta.entityName;
+  if (schema.description) return schema.description;
 
   // For nested objects, use the parent field name to create a descriptive name
   if (parentFieldName) {
@@ -330,6 +378,37 @@ function getEntityName(
   }
 
   return 'Schema';
+}
+
+function getEntityDescription(schema: z.ZodTypeAny, registry: MetadataRegistry): string | undefined {
+  const meta = registry.get(schema);
+  return meta?.description ?? schema.description ?? undefined;
+}
+
+function getFieldDescription(
+  fieldSchema: z.ZodTypeAny,
+  registry: MetadataRegistry,
+  parentSchema: z.ZodTypeAny,
+  fieldName: string,
+): string | undefined {
+  const parentMeta = registry.get(parentSchema);
+  const fieldMeta = parentMeta?.fields?.[fieldName]?.description;
+  return fieldMeta ?? fieldSchema.description ?? undefined;
+}
+
+// Extracts a reasonable brand key for string IDs branded via z.string().brand('Key')
+function getStringBrandKey(schema: z.ZodTypeAny): unknown {
+  const def: any = (schema as any).def ?? (schema as any)._def;
+  if (!def) return undefined;
+  // Zod 4 keeps brand in def.brand for branded schemas
+  if (def.brand !== undefined) return def.brand;
+  if (Array.isArray(def.branding) && def.branding.length > 0) return def.branding.slice();
+  // Some builds might expose checks with brand info
+  if (def.checks) {
+    const brandCheck = def.checks.find((c: any) => c.kind === 'brand' || c.brand !== undefined);
+    if (brandCheck) return brandCheck.brand ?? brandCheck.kind;
+  }
+  return undefined;
 }
 
 /**
@@ -620,7 +699,8 @@ function generateERDiagram(entities: SchemaEntity[], options: Required<MermaidOp
 
   // Add entity definitions
   for (const entity of entities) {
-    lines.push(`    ${entity.name} {`);
+    const entityHeaderDescription = entity.description ? ` "${entity.description}"` : '';
+    lines.push(`    ${entity.name} {${entityHeaderDescription}`);
 
     for (const field of entity.fields) {
       let fieldType = field.type;
@@ -635,9 +715,15 @@ function generateERDiagram(entities: SchemaEntity[], options: Required<MermaidOp
         validation.unshift(`&lt;${escapedParams}&gt;`);
       }
 
+      const parts: string[] = [];
+      // Base field type and name
       const fieldLine = `        ${fieldType} ${field.name}`;
-      const validationString =
-        options.includeValidation && validation?.length ? ` "${validation.join(', ')}"` : '';
+      parts.push(fieldLine);
+      // Build annotations: description and validation
+      const annotations: string[] = [];
+      if (field.description) annotations.push(field.description);
+      if (options.includeValidation && validation?.length) annotations.push(...validation);
+      const validationString = annotations.length ? ` "${annotations.join(', ')}"` : '';
 
       lines.push(`${fieldLine}${validationString}`);
     }
@@ -676,8 +762,10 @@ function generateERDiagram(entities: SchemaEntity[], options: Required<MermaidOp
           // Single ID reference - use "many-to-one" relationship
           relationshipType = field.isOptional ? '}o--o{' : '}o--||';
         }
+        const target = findEntityByNameAndBrand(entities, field.referencedEntity, field.referencedBrandKey);
+        const targetName = target?.name ?? field.referencedEntity;
         lines.push(
-          `    ${entity.name} ${relationshipType} ${field.referencedEntity} : "${field.name}"`,
+          `    ${entity.name} ${relationshipType} ${targetName} : "${field.name}"`,
         );
       }
 
@@ -708,6 +796,28 @@ function generateERDiagram(entities: SchemaEntity[], options: Required<MermaidOp
   return lines.join('\n');
 }
 
+function findEntityByNameAndBrand(
+  entities: SchemaEntity[],
+  name: string,
+  brandKey: unknown,
+): SchemaEntity | undefined {
+  if (brandKey === undefined) {
+    return entities.find(e => e.name === name);
+  }
+  const byName = entities.filter(e => e.name === name);
+  if (byName.length === 0) return undefined;
+  const match = byName.find(e => deepEqual(e.idBrandKey, brandKey));
+  return match ?? byName[0];
+}
+
+function deepEqual(a: unknown, b: unknown): boolean {
+  try {
+    return JSON.stringify(a) === JSON.stringify(b);
+  } catch {
+    return a === b;
+  }
+}
+
 /**
  * Generates a Class diagram
  * @param entities - The schema entities
@@ -723,7 +833,9 @@ function generateClassDiagram(entities: SchemaEntity[]): string {
 
     for (const field of entity.fields) {
       const visibility = field.isOptional ? '+' : '+';
-      const fieldLine = `        ${visibility}${field.name}: ${field.type}`;
+      const base = `        ${visibility}${field.name}: ${field.type}`;
+      const suffix = field.description ? ` // ${field.description}` : '';
+      const fieldLine = `${base}${suffix}`;
       lines.push(fieldLine);
     }
 
@@ -805,7 +917,8 @@ function generateFlowchartDiagram(entities: SchemaEntity[]): string {
   // Add field nodes and their connections to parent entities
   for (const entity of entities) {
     for (const field of entity.fields) {
-      const fieldNode = `${entity.name}_${field.name}["${field.name}: ${field.type}"]`;
+      const label = field.description ? `${field.name}: ${field.type}\\n${field.description}` : `${field.name}: ${field.type}`;
+      const fieldNode = `${entity.name}_${field.name}["${label}"]`;
       lines.push(`    ${fieldNode}`);
       lines.push(`    ${entity.name} --> ${fieldNode}`);
 
