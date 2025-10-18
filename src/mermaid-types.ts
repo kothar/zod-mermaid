@@ -49,10 +49,10 @@ export interface MermaidOptions {
   };
 
   /**
-   * Registry used to look up schema/field metadata.
-   * If not provided, the global metadata registry is used.
+   * Custom Zod metadata registry to use instead of the global one.
+   * If omitted, the Zod global registry (if available) and schema-level metadata are used.
    */
-  metadataRegistry?: MetadataRegistry;
+  metadataRegistry?: unknown;
 }
 
 /**
@@ -100,35 +100,4 @@ export interface SchemaEntity {
    * Used for resolving references when names are ambiguous.
    */
   idBrandKey?: unknown;
-}
-
-/**
- * Metadata for schemas and fields used by the generator.
- */
-export interface SchemaMetadata {
-  /**
-   * Override for the entity name.
-   */
-  entityName?: string;
-  /**
-   * Human-friendly description for the schema/entity.
-   */
-  description?: string;
-  /**
-   * Name of the ID field for the entity (defaults to 'id').
-   */
-  idFieldName?: string;
-  /**
-   * Field-level metadata by field name.
-   */
-  fields?: Record<string, { description?: string }>;
-}
-
-/**
- * Registry for associating Zod schemas with metadata.
- */
-export interface MetadataRegistry {
-  get(schema: import('zod').z.ZodTypeAny): SchemaMetadata | undefined;
-  set(schema: import('zod').z.ZodTypeAny, metadata: SchemaMetadata): void;
-  clear(): void;
 }

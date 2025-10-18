@@ -1,5 +1,5 @@
 import { z, ZodNumber } from 'zod';
-import type { MermaidOptions, SchemaEntity, SchemaMetadata, MetadataRegistry } from './mermaid-types';
+import type { MermaidOptions, SchemaEntity } from './mermaid-types';
 import { DiagramGenerationError, SchemaParseError, ZodMermaidError } from './errors';
 
 /**
@@ -16,22 +16,8 @@ const DEFAULT_OPTIONS: Required<Omit<MermaidOptions, 'metadataRegistry'>> & Pick
   },
   metadataRegistry: undefined,
 };
-
-// Simple global metadata registry (fallback) using WeakMap keyed by schema instances
-const globalMetadataRegistry: MetadataRegistry = (() => {
-  const map = new WeakMap<z.ZodTypeAny, SchemaMetadata>();
-  return {
-    get: (schema: z.ZodTypeAny) => map.get(schema),
-    set: (schema: z.ZodTypeAny, metadata: SchemaMetadata) => {
-      map.set(schema, metadata);
-    },
-    clear: () => map.clear(),
-  };
-})();
-
-export function getGlobalMetadataRegistry(): MetadataRegistry {
-  return globalMetadataRegistry;
-}
+// Note: No custom metadata registry implementation here. We defer to Zod's built-in
+// schema description/meta and any global/custom registry exposed by Zod itself.
 
 /**
  * Generates a Mermaid diagram from one or more Zod schemas
@@ -47,11 +33,11 @@ export function generateMermaidDiagram(
   options: MermaidOptions = {},
 ): string {
   try {
-    const mergedOptions: Required<Omit<MermaidOptions, 'metadataRegistry'>> & { metadataRegistry?: MetadataRegistry } = {
+    const mergedOptions: Required<Omit<MermaidOptions, 'metadataRegistry'>> & { metadataRegistry?: unknown } = {
       ...DEFAULT_OPTIONS,
       ...options,
     } as any;
-    const registry = mergedOptions.metadataRegistry ?? globalMetadataRegistry;
+    const registry = mergedOptions.metadataRegistry;
 
     // Handle both single schema and array of schemas
     const schemas = Array.isArray(schema) ? schema : [schema];
@@ -96,8 +82,8 @@ export function generateMermaidDiagram(
  */
 function parseSchemaToEntities(
   schema: z.ZodTypeAny,
-  options: Required<Omit<MermaidOptions, 'metadataRegistry'>> & { metadataRegistry?: MetadataRegistry },
-  registry: MetadataRegistry,
+  options: Required<Omit<MermaidOptions, 'metadataRegistry'>> & { metadataRegistry?: unknown },
+  registry: unknown,
   parentFieldName?: string,
 ): SchemaEntity[] {
   const entities: SchemaEntity[] = [];
@@ -110,8 +96,7 @@ function parseSchemaToEntities(
     const entityName = getEntityName(schema, options, registry, parentFieldName);
 
     // Resolve brand key for ID field if present to help disambiguate entities with same name
-    const schemaMeta = registry.get(schema);
-    const idFieldName = schemaMeta?.idFieldName ?? 'id';
+    const idFieldName = getIdFieldNameFromRegistryOrDefault(schema, registry);
     let idBrandKey: unknown = undefined;
     if (shape && (idFieldName in shape)) {
       const idFieldSchema = (shape as any)[idFieldName] as z.ZodTypeAny;
@@ -357,12 +342,12 @@ function parseSchemaToEntities(
  */
 function getEntityName(
   schema: z.ZodTypeAny,
-  options: Required<Omit<MermaidOptions, 'metadataRegistry'>> & { metadataRegistry?: MetadataRegistry },
-  registry: MetadataRegistry,
+  options: Required<Omit<MermaidOptions, 'metadataRegistry'>> & { metadataRegistry?: unknown },
+  registry: unknown,
   parentFieldName?: string,
 ): string {
   // Try to get name from schema metadata or use a default
-  const meta = registry.get(schema);
+  const meta = getSchemaMetaFromRegistry(schema, registry);
   if (meta?.entityName) return meta.entityName;
   if (schema.description) return schema.description;
 
@@ -380,18 +365,18 @@ function getEntityName(
   return 'Schema';
 }
 
-function getEntityDescription(schema: z.ZodTypeAny, registry: MetadataRegistry): string | undefined {
-  const meta = registry.get(schema);
+function getEntityDescription(schema: z.ZodTypeAny, registry: unknown): string | undefined {
+  const meta = getSchemaMetaFromRegistry(schema, registry);
   return meta?.description ?? schema.description ?? undefined;
 }
 
 function getFieldDescription(
   fieldSchema: z.ZodTypeAny,
-  registry: MetadataRegistry,
+  registry: unknown,
   parentSchema: z.ZodTypeAny,
   fieldName: string,
 ): string | undefined {
-  const parentMeta = registry.get(parentSchema);
+  const parentMeta = getSchemaMetaFromRegistry(parentSchema, registry);
   const fieldMeta = parentMeta?.fields?.[fieldName]?.description;
   return fieldMeta ?? fieldSchema.description ?? undefined;
 }
@@ -409,6 +394,30 @@ function getStringBrandKey(schema: z.ZodTypeAny): unknown {
     if (brandCheck) return brandCheck.brand ?? brandCheck.kind;
   }
   return undefined;
+}
+
+// Helpers to interop with Zod's meta/registry (without imposing our own types)
+type LooseSchemaMeta = {
+  entityName?: string;
+  description?: string;
+  idFieldName?: string;
+  fields?: Record<string, { description?: string }>;
+} | undefined;
+
+function getSchemaMetaFromRegistry(schema: z.ZodTypeAny, registry: unknown): LooseSchemaMeta {
+  if (!registry) return undefined;
+  try {
+    const maybe = (registry as any).get?.(schema);
+    if (maybe) return maybe as LooseSchemaMeta;
+  } catch {
+    // ignore
+  }
+  return undefined;
+}
+
+function getIdFieldNameFromRegistryOrDefault(schema: z.ZodTypeAny, registry: unknown): string {
+  const meta = getSchemaMetaFromRegistry(schema, registry);
+  return meta?.idFieldName ?? 'id';
 }
 
 /**
