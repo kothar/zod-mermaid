@@ -380,19 +380,13 @@ function getEntityName(
 ): string {
   // Try to get name from schema metadata or use a default
   const meta = getSchemaMetaFromRegistry(schema, registry);
-  if (meta?.title) return meta.title;
   if (meta?.entityName) return meta.entityName;
-  if (schema.description) return schema.description;
+  if (meta?.title) return meta.title;
+  if (meta?.description) return meta.description;
 
   // For nested objects, use the parent field name to create a descriptive name
   if (parentFieldName) {
     return parentFieldName.charAt(0).toUpperCase() + parentFieldName.slice(1);
-  }
-
-  // For top-level entities, use the provided entityName option
-  const schemaType = schema.constructor.name;
-  if (schemaType.includes('Object') || schemaType.includes('ZodDiscriminatedUnion')) {
-    return options.entityName;
   }
 
   return 'Schema';
@@ -400,7 +394,7 @@ function getEntityName(
 
 function getEntityDescription(schema: z.ZodTypeAny, registry: unknown): string | undefined {
   const meta = getSchemaMetaFromRegistry(schema, registry);
-  return meta?.description ?? schema.description ?? undefined;
+  return meta?.description ?? undefined;
 }
 
 function getFieldDescription(
@@ -439,12 +433,20 @@ type LooseSchemaMeta = {
 } | undefined;
 
 function getSchemaMetaFromRegistry(schema: z.ZodTypeAny, registry: unknown): LooseSchemaMeta {
-  if (!registry) return undefined;
-  try {
-    const maybe = (registry as any).get?.(schema);
-    if (maybe) return maybe as LooseSchemaMeta;
-  } catch {
-    // ignore
+  // Prefer a provided registry
+  if (registry) {
+    try {
+      const maybe = (registry as any).get?.(schema);
+      if (maybe) return maybe as LooseSchemaMeta;
+    } catch {
+      // ignore
+    }
+  }
+  // Fallback: read metadata directly from the schema definition (Zod stores meta there)
+  const def: any = (schema as any).def ?? (schema as any)._def;
+  const meta = (def?.meta ?? def?.metadata) as Record<string, unknown> | undefined;
+  if (meta && typeof meta === 'object') {
+    return meta as LooseSchemaMeta;
   }
   return undefined;
 }

@@ -502,7 +502,7 @@ const EventSchema = z.object({
   type: z.literal('com.example.event.product'),
   date: z.date(),
   data: ProductEventPayloadSchema,
-  }).meta({title: 'Event'});
+}).meta({ title: 'Event', description: 'Event entity via registry meta' });
 ```
 
 ### ID Reference Schema
@@ -540,10 +540,13 @@ To generate your own diagrams:
 import { z } from 'zod';
 import { generateMermaidDiagram } from 'zod-mermaid';
 
-// Use .describe() to provide entity names
+// Three ways to provide names/descriptions:
+// 1) Entity name via registry meta: .meta({ title: '...' })
+// 2) Fallback name via entityName option
+// 3) Description via registry meta: .meta({ description: '...' })
 const mySchema = z.object({
   // Your schema definition
-}).describe('MyEntity');
+}).meta({ title: 'MyEntity', description: 'Example entity using registry meta' });
 
 const diagram = generateMermaidDiagram(mySchema, {
   diagramType: 'er', // 'er' | 'class' | 'flowchart'
@@ -552,4 +555,4 @@ const diagram = generateMermaidDiagram(mySchema, {
 });
 ```
 
-**Note:** The library automatically uses the schema description (set with `.describe()`) as the entity name. If no description is provided, it will use the `entityName` option or default to 'Schema'.
+**Note:** Entity identification precedence now is: meta.title (registry) > meta.description (registry) > `entityName` option fallback. The `.describe()` helper sets the Zod description and may also be mirrored into meta by your registry implementation, but the generator reads from the registry.
