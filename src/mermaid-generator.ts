@@ -1,6 +1,9 @@
-import { z, ZodNumber } from 'zod';
+import { GlobalMeta, z, ZodNumber } from 'zod';
 import type { MermaidOptions, SchemaEntity } from './mermaid-types';
 import { DiagramGenerationError, SchemaParseError, ZodMermaidError } from './errors';
+import { $ZodRegistry } from 'zod/v4/core/registries.cjs';
+import { getEntityName } from './entity';
+import { getStringBrandKey } from './id-ref';
 
 /**
  * Default options for Mermaid diagram generation
@@ -14,7 +17,7 @@ const DEFAULT_OPTIONS: Required<Omit<MermaidOptions, 'metadataRegistry'>> & Pick
     primaryColor: '#4CAF50',
     secondaryColor: '#2196F3',
   },
-  metadataRegistry: undefined,
+  metadataRegistry: z.globalRegistry,
 };
 
 /**
@@ -31,7 +34,7 @@ export function generateMermaidDiagram(
   options: MermaidOptions = {},
 ): string {
   try {
-    const mergedOptions: Required<Omit<MermaidOptions, 'metadataRegistry'>> & { metadataRegistry?: unknown } = {
+    const mergedOptions: Required<MermaidOptions> = {
       ...DEFAULT_OPTIONS,
       ...options,
     } as any;
@@ -80,8 +83,8 @@ export function generateMermaidDiagram(
  */
 function parseSchemaToEntities(
   schema: z.ZodTypeAny,
-  options: Required<Omit<MermaidOptions, 'metadataRegistry'>> & { metadataRegistry?: unknown },
-  registry: unknown,
+  options: Required<Omit<MermaidOptions, 'metadataRegistry'>>,
+  registry: $ZodRegistry<GlobalMeta>,
   parentFieldName?: string,
 ): SchemaEntity[] {
   const entities: SchemaEntity[] = [];
@@ -103,7 +106,7 @@ function parseSchemaToEntities(
   if (schema.def.type === 'object') {
     const objectSchema = schema as z.ZodObject<Record<string, z.ZodTypeAny>>;
     const { shape } = objectSchema;
-    const entityName = getEntityName(schema, options, registry, parentFieldName);
+    const entityName = getEntityName(schema, options.entityName, registry, parentFieldName);
 
     // Resolve brand key for ID field if present to help disambiguate entities with same name
     const idFieldName = getIdFieldNameFromRegistryOrDefault(schema, registry);
@@ -122,8 +125,7 @@ function parseSchemaToEntities(
       const fieldSchema = value as z.ZodTypeAny;
       const fieldType = getFieldType(fieldSchema, key, entityName);
       const isOptional = isFieldOptional(fieldSchema);
-      const validation = getFieldValidation(fieldSchema);
-      const fieldDescription = getFieldDescription(fieldSchema, registry, schema, key);
+      const validation = getFieldValidation(fieldSchema, registry);
 
       // Track ID references for placeholder entity creation
       // Handle direct ID refs, optional ID refs, and arrays of ID refs
@@ -131,9 +133,10 @@ function parseSchemaToEntities(
       let referencedEntity: string | undefined = undefined;
       let referencedBrandKey: unknown = undefined;
 
-      if (fieldType === 'string' && (fieldSchema as any).__idRef) {
+      const fieldMeta = registry.get(fieldSchema);
+      if (fieldType === 'string' && fieldMeta?.['targetEntityName']) {
         isIdRef = true;
-        referencedEntity = (fieldSchema as any).__idRef;
+        referencedEntity = fieldMeta['targetEntityName'] as string;
         referencedBrandKey =
           (fieldSchema as any).__idBranding ?? getStringBrandKey(fieldSchema);
       } else if (isOptional && fieldSchema.def.type === 'optional') {
@@ -166,7 +169,6 @@ function parseSchemaToEntities(
         type: fieldType,
         isOptional,
         validation,
-        description: fieldDescription,
         isIdReference: isIdRef,
         referencedEntity,
         referencedBrandKey,
@@ -176,7 +178,6 @@ function parseSchemaToEntities(
     entities.push({
       name: entityName,
       fields,
-      description: getEntityDescription(schema, registry),
       idBrandKey,
     });
 
@@ -241,7 +242,7 @@ function parseSchemaToEntities(
     const { options: unionOptions, discriminator } = unionDef;
 
     // Create a base entity for the union
-    const unionEntityName = getEntityName(schema, options, registry, parentFieldName);
+    const unionEntityName = getEntityName(schema, options.entityName, registry, parentFieldName);
 
     // Extract discriminator values
     const discriminatorValues = unionOptions.map((opt: any) => {
@@ -267,7 +268,6 @@ function parseSchemaToEntities(
     entities.push({
       name: unionEntityName,
       fields: [discriminatorField],
-      description: undefined,
       unionRelationships: {
         baseEntity: unionEntityName,
         subtypes: unionSubtypes,
@@ -295,22 +295,19 @@ function parseSchemaToEntities(
             const fieldSchema = value as z.ZodTypeAny;
             const fieldType = getFieldType(fieldSchema, key, optionEntityName);
             const isOptional = isFieldOptional(fieldSchema);
-            const validation = getFieldValidation(fieldSchema);
-            const fieldDescription = getFieldDescription(fieldSchema, registry, optionSchema, key);
+            const validation = getFieldValidation(fieldSchema, registry);
 
             return {
               name: key,
               type: fieldType,
               isOptional,
-              validation,
-              description: fieldDescription,
+              validation
             };
           });
 
         entities.push({
           name: optionEntityName,
           fields: optionFields,
-          description: getEntityDescription(optionSchema, registry),
         });
 
         // Add to union subtypes tracking with discriminator value
@@ -357,7 +354,6 @@ function parseSchemaToEntities(
       entities.push({
         name: referencedEntityName,
         fields: [],
-        description: undefined,
       });
     }
   }
@@ -365,101 +361,9 @@ function parseSchemaToEntities(
   return entities;
 }
 
-/**
- * Gets the entity name from a schema
- * @param schema - The Zod schema
- * @param options - The diagram options
- * @param parentFieldName - The name of the parent field (for nested objects)
- * @returns The entity name
- */
-function getEntityName(
-  schema: z.ZodTypeAny,
-  options: Required<Omit<MermaidOptions, 'metadataRegistry'>> & { metadataRegistry?: unknown },
-  registry: unknown,
-  parentFieldName?: string,
-): string {
-  // Try to get name from schema metadata or use a default
-  const meta = getSchemaMetaFromRegistry(schema, registry);
-  if (meta?.entityName) return meta.entityName;
-  if (meta?.title) return meta.title;
-  // Do NOT use description for the identifier; it may be multi-token
-
-  // For nested objects, use the parent field name to create a descriptive name
-  if (parentFieldName) {
-    return parentFieldName.charAt(0).toUpperCase() + parentFieldName.slice(1);
-  }
-
-  // Fallback to configured default entity name for top-level entities
-  const schemaType = schema.constructor.name;
-  if (schemaType.includes('Object') || schemaType.includes('ZodDiscriminatedUnion')) {
-    return options.entityName;
-  }
-
-  return options.entityName;
-}
-
-function getEntityDescription(schema: z.ZodTypeAny, registry: unknown): string | undefined {
-  const meta = getSchemaMetaFromRegistry(schema, registry);
-  return meta?.description ?? schema.description ?? undefined;
-}
-
-function getFieldDescription(
-  fieldSchema: z.ZodTypeAny,
-  registry: unknown,
-  parentSchema: z.ZodTypeAny,
-  fieldName: string,
-): string | undefined {
-  const parentMeta = getSchemaMetaFromRegistry(parentSchema, registry);
-  const fieldMeta = parentMeta?.fields?.[fieldName]?.description;
-  return fieldMeta ?? fieldSchema.description ?? undefined;
-}
-
-// Extracts a reasonable brand key for string IDs branded via z.string().brand('Key')
-function getStringBrandKey(schema: z.ZodTypeAny): unknown {
-  const def: any = (schema as any).def ?? (schema as any)._def;
-  if (!def) return undefined;
-  // Zod 4 keeps brand in def.brand for branded schemas
-  if (def.brand !== undefined) return def.brand;
-  if (Array.isArray(def.branding) && def.branding.length > 0) return def.branding.slice();
-  // Some builds might expose checks with brand info
-  if (def.checks) {
-    const brandCheck = def.checks.find((c: any) => c.kind === 'brand' || c.brand !== undefined);
-    if (brandCheck) return brandCheck.brand ?? brandCheck.kind;
-  }
-  return undefined;
-}
-
-// Helpers to interop with Zod's meta/registry (without imposing our own types)
-type LooseSchemaMeta = {
-  title?: string;
-  entityName?: string;
-  description?: string;
-  idFieldName?: string;
-  fields?: Record<string, { description?: string }>;
-} | undefined;
-
-function getSchemaMetaFromRegistry(schema: z.ZodTypeAny, registry: unknown): LooseSchemaMeta {
-  // Prefer a provided registry
-  if (registry) {
-    try {
-      const maybe = (registry as any).get?.(schema);
-      if (maybe) return maybe as LooseSchemaMeta;
-    } catch {
-      // ignore
-    }
-  }
-  // Fallback: read metadata directly from the schema definition (Zod stores meta there)
-  const def: any = (schema as any).def ?? (schema as any)._def;
-  const meta = (def?.meta ?? def?.metadata) as Record<string, unknown> | undefined;
-  if (meta && typeof meta === 'object') {
-    return meta as LooseSchemaMeta;
-  }
-  return undefined;
-}
-
-function getIdFieldNameFromRegistryOrDefault(schema: z.ZodTypeAny, registry: unknown): string {
-  const meta = getSchemaMetaFromRegistry(schema, registry);
-  return meta?.idFieldName ?? 'id';
+function getIdFieldNameFromRegistryOrDefault(schema: z.ZodTypeAny, registry: $ZodRegistry<GlobalMeta>): string {
+  const meta = registry.get(schema);
+  return meta?.['idFieldName'] as string | undefined ?? 'id';
 }
 
 /**
@@ -627,7 +531,7 @@ function isFieldOptional(schema: z.ZodTypeAny): boolean {
  * @param schema - The Zod schema
  * @returns Array of validation rules
  */
-function getFieldValidation(schema: z.ZodTypeAny): string[] {
+function getFieldValidation(schema: z.ZodTypeAny, registry: $ZodRegistry<GlobalMeta>): string[] {
   const validations: string[] = [];
   const { type } = schema.def;
 
@@ -641,19 +545,19 @@ function getFieldValidation(schema: z.ZodTypeAny): string[] {
           : type === 'default'
             ? (schema as z.ZodDefault<any>).unwrap()
             : (schema as z.ZodLazy<any>).unwrap();
-    return getFieldValidation(unwrappedSchema);
+    return getFieldValidation(unwrappedSchema, registry);
   }
 
   // Handle wrapped types (pipe/preprocess/transform)
   if (type === 'pipe' && (schema as any).out) {
-    return getFieldValidation((schema as any).out);
+    return getFieldValidation((schema as any).out, registry);
   }
 
   // Handle arrays
   if (type === 'array') {
     const arraySchema = schema as z.ZodArray<any>;
     const elementSchema = arraySchema.element;
-    return getFieldValidation(elementSchema);
+    return getFieldValidation(elementSchema, registry);
   }
 
   // Check for string validations
@@ -662,8 +566,9 @@ function getFieldValidation(schema: z.ZodTypeAny): string[] {
     const checks = def.checks || [];
 
     // Check for ID reference metadata
-    if ((schema as any).__idRef) {
-      validations.push(`ref: ${(schema as any).__idRef}`);
+    const meta = registry.get(schema);
+    if (meta?.['targetEntityName']) {
+      validations.push(`ref: ${meta['targetEntityName']}`);
     }
 
     // Check for format-based validations (new Zod 4.x top-level validators)

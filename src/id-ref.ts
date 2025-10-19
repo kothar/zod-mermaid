@@ -1,4 +1,5 @@
-import { z } from 'zod';
+import { globalRegistry, z } from 'zod';
+import { getEntityName } from './entity';
 
 /**
  * Creates a field that references another entity by ID, inferring the type from the referenced
@@ -43,20 +44,29 @@ export function idRef<
   }
 
   // Use the provided entity name or the schema description
-  const targetEntityName = entityName || schema.description || 'Unknown';
+  const targetEntityName = entityName 
+    || getEntityName(schema, 'Entity', globalRegistry)
+    || getStringBrandKey(idFieldSchema);
 
   // Create a new schema with the same type and validation as the ID field
-  const resultSchema = idFieldSchema.clone();
-
-  // Add metadata to indicate this is an ID reference
-  (resultSchema as any).__idRef = targetEntityName;
-
-  // Capture brand information (Zod 4 brand) if present on the ID field
-  // This is used to disambiguate references when entity names collide
-  const idDef: any = (idFieldSchema as any).def;
-  if (idDef && Array.isArray(idDef.branding) && idDef.branding.length > 0) {
-    (resultSchema as any).__idBranding = idDef.branding.slice();
-  }
-
+  const resultSchema = idFieldSchema.clone().meta({
+    targetEntityName,
+  });
   return resultSchema as T['shape'][K];
+}
+
+
+// Extracts a reasonable brand key for string IDs branded via z.string().brand('Key')
+export function getStringBrandKey(schema: z.ZodTypeAny): unknown {
+  const def: any = (schema as any).def ?? (schema as any)._def;
+  if (!def) return undefined;
+  // Zod 4 keeps brand in def.brand for branded schemas
+  if (def.brand !== undefined) return def.brand;
+  if (Array.isArray(def.branding) && def.branding.length > 0) return def.branding.slice();
+  // Some builds might expose checks with brand info
+  if (def.checks) {
+    const brandCheck = def.checks.find((c: any) => c.kind === 'brand' || c.brand !== undefined);
+    if (brandCheck) return brandCheck.brand ?? brandCheck.kind;
+  }
+  return undefined;
 }

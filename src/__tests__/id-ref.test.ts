@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import { globalRegistry, z } from 'zod';
 import { idRef } from '../id-ref';
 
 describe('idRef', () => {
@@ -6,7 +6,9 @@ describe('idRef', () => {
     const CustomerSchema = z.object({ id: z.string() }).describe('Customer');
     const refField = idRef(CustomerSchema);
     expect(refField.safeParse('abc').success).toBe(true);
-    expect((refField as any).__idRef).toBe('Customer');
+
+    const meta = globalRegistry.get(refField);
+    expect(meta?.['targetEntityName']).toBe('Customer');
   });
 
   it('should throw if the id field does not exist', () => {
@@ -18,12 +20,15 @@ describe('idRef', () => {
     const CustomSchema = z.object({ uuid: z.string() }).describe('Custom');
     const refField = idRef(CustomSchema, 'uuid');
     expect(refField.safeParse('abc').success).toBe(true);
-    expect((refField as any).__idRef).toBe('Custom');
+
+    const meta = (refField as any)._def?.metadata ?? {};
+    expect(meta.targetEntityName).toBe('Custom');
   });
 
   it('should use a custom entity name if provided', () => {
     const CustomerSchema = z.object({ id: z.string() });
     const refField = idRef(CustomerSchema, 'id', 'MyCustomer');
-    expect((refField as any).__idRef).toBe('MyCustomer');
+    const meta = globalRegistry.get(refField);
+    expect(meta?.['targetEntityName']).toBe('MyCustomer');
   });
-}); 
+});

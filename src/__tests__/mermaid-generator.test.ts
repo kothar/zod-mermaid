@@ -6,11 +6,11 @@ import { idRef } from '../id-ref';
 
 describe('Mermaid Generator', () => {
   const mockSchema = z.object({
-    id: z.string().brand('EntityId'),
+    id: z.string().brand('Entity'),
     name: z.string(),
     email: z.email(),
     age: z.number().min(0).max(120),
-  });
+  }).describe('MockSchema');
 
   describe('when generating ER diagrams', () => {
     it('should generate a valid ER diagram', () => {
@@ -149,19 +149,19 @@ describe('Mermaid Generator', () => {
   describe('ID References', () => {
     it('should generate relationships for ID references', () => {
       const CustomerSchema = z.object({
-        id: z.string().brand('CustomerId'),
+        id: z.string().brand('Customer'),
         name: z.string(),
         email: z.email(),
       }).describe('Customer');
 
       const ProductSchema = z.object({
-        id: z.string().brand('ProductId'),
+        id: z.string().brand('Product'),
         name: z.string(),
         price: z.number().positive(),
       }).describe('Product');
 
       const OrderSchema = z.object({
-        id: z.string().brand('OrderId'),
+        id: z.string().brand('Order'),
         customerId: idRef(CustomerSchema),
         productId: idRef(ProductSchema),
         quantity: z.number().positive(),
@@ -186,12 +186,12 @@ describe('Mermaid Generator', () => {
 
     it('should work with optional ID references', () => {
       const UserSchema = z.object({
-        id: z.string().brand('UserId'),
+        id: z.string().brand('User'),
         name: z.string(),
       }).describe('User');
 
       const PostSchema = z.object({
-        id: z.string().brand('PostId'),
+        id: z.string().brand('Post'),
         title: z.string(),
         content: z.string(),
         authorId: idRef(UserSchema),
@@ -211,18 +211,18 @@ describe('Mermaid Generator', () => {
 
     it('should work with arrays of ID references', () => {
       const UserSchema = z.object({
-        id: z.string().brand('UserId'),
+        id: z.string().brand('User'),
         name: z.string(),
       }).describe('User');
 
       const ProductSchema = z.object({
-        id: z.string().brand('ProductId'),
+        id: z.string().brand('Product'),
         name: z.string(),
         price: z.number().positive(),
       }).describe('Product');
 
       const OrderSchema = z.object({
-        id: z.string().brand('OrderId'),
+        id: z.string().brand('Order'),
         customerId: idRef(UserSchema),
         productIds: z.array(idRef(ProductSchema)),
         quantity: z.number().positive(),
@@ -243,20 +243,20 @@ describe('Mermaid Generator', () => {
   describe('multiple schemas', () => {
     it('should generate diagrams from an array of schemas', () => {
       const UserSchema = z.object({
-        id: z.string().brand('UserId'),
+        id: z.string().brand('User'),
         name: z.string(),
         email: z.email(),
       }).describe('User');
 
       const ProductSchema = z.object({
-        id: z.string().brand('ProductId'),
+        id: z.string().brand('Product'),
         name: z.string(),
         price: z.number().positive(),
         category: z.enum(['electronics', 'clothing', 'books']),
       }).describe('Product');
 
       const OrderSchema = z.object({
-        id: z.string().brand('OrderId'),
+        id: z.string().brand('Order'),
         customerId: idRef(UserSchema),
         productId: idRef(ProductSchema),
         quantity: z.number().positive(),

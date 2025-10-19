@@ -244,7 +244,7 @@ erDiagram
         string id
         string type "literal: com.example.event.product"
         date date
-        ProductEventPayload data "ProductEventPayload"
+        ProductEventPayload data
     }
     ProductEventPayload {
         string eventType "enum: addProduct, removeProduct, updateProduct"
@@ -277,7 +277,7 @@ classDiagram
         +id: string
         +type: string
         +date: date
-        +data: ProductEventPayload // ProductEventPayload
+        +data: ProductEventPayload
     }
     class ProductEventPayload {
         +eventType: string
@@ -317,9 +317,9 @@ flowchart TD
     Event --> Event_type["type: string"]
     Event_date["date: date"]
     Event --> Event_date["date: date"]
-    Event_data["data: ProductEventPayload\nProductEventPayload"]
-    Event --> Event_data["data: ProductEventPayload\nProductEventPayload"]
-    Event_data["data: ProductEventPayload\nProductEventPayload"] --> ProductEventPayload
+    Event_data["data: ProductEventPayload"]
+    Event --> Event_data["data: ProductEventPayload"]
+    Event_data["data: ProductEventPayload"] --> ProductEventPayload
     ProductEventPayload_eventType["eventType: string"]
     ProductEventPayload --> ProductEventPayload_eventType["eventType: string"]
     AddProductEvent_id["id: string"]
@@ -359,7 +359,6 @@ erDiagram
         string status "enum: pending, shipped, delivered"
     }
     Order }o--|| Customer : "customerId"
-    Order }o--o{ Product : "productIds"
 ```
 
 ### Class Diagram
@@ -375,10 +374,7 @@ classDiagram
     }
     class Customer {
     }
-    class Product {
-    }
     Order --> Customer : customerId (ref)
-    Order --> Product : productIds (ref)
 ```
 
 ### Flowchart Diagram
@@ -386,7 +382,6 @@ classDiagram
 flowchart TD
     Order["Order"]
     Customer["Customer"]
-    Product["Product"]
     Order_id["id: string"]
     Order --> Order_id["id: string"]
     Order_customerId["customerId: string"]
@@ -394,7 +389,6 @@ flowchart TD
     Order_customerId["customerId: string"] -.-> Customer
     Order_productIds["productIds: string[]"]
     Order --> Order_productIds["productIds: string[]"]
-    Order_productIds["productIds: string[]"] -.-> Product
     Order_quantity["quantity: number"]
     Order --> Order_quantity["quantity: number"]
     Order_orderDate["orderDate: date"]
@@ -502,7 +496,7 @@ const EventSchema = z.object({
   type: z.literal('com.example.event.product'),
   date: z.date(),
   data: ProductEventPayloadSchema,
-}).meta({ title: 'Event', description: 'Event entity via registry meta' });
+  }).meta({title: 'Event'});
 ```
 
 ### ID Reference Schema
@@ -540,13 +534,10 @@ To generate your own diagrams:
 import { z } from 'zod';
 import { generateMermaidDiagram } from 'zod-mermaid';
 
-// Three ways to provide names/descriptions:
-// 1) Entity name via registry meta: .meta({ title: '...' })
-// 2) Fallback name via entityName option
-// 3) Description via registry meta: .meta({ description: '...' })
+// Use .describe() to provide entity names
 const mySchema = z.object({
   // Your schema definition
-}).meta({ title: 'MyEntity', description: 'Example entity using registry meta' });
+}).describe('MyEntity');
 
 const diagram = generateMermaidDiagram(mySchema, {
   diagramType: 'er', // 'er' | 'class' | 'flowchart'
@@ -555,4 +546,4 @@ const diagram = generateMermaidDiagram(mySchema, {
 });
 ```
 
-**Note:** Entity identification precedence now is: meta.title (registry) > meta.description (registry) > `entityName` option fallback. The `.describe()` helper sets the Zod description and may also be mirrored into meta by your registry implementation, but the generator reads from the registry.
+**Note:** The library automatically uses the schema description (set with `.describe()`) as the entity name. If no description is provided, it will use the `entityName` option or default to 'Schema'.
