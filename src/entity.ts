@@ -1,4 +1,4 @@
-import { GlobalMeta, z } from 'zod';
+import { z } from 'zod';
 import { $ZodRegistry } from 'zod/v4/core/registries.cjs';
 
 /**
@@ -10,7 +10,7 @@ import { $ZodRegistry } from 'zod/v4/core/registries.cjs';
  */
 export function getEntityName(
   schema: z.ZodTypeAny,
-  registry: $ZodRegistry<GlobalMeta>,
+  registry: $ZodRegistry<any>,
   parentFieldName?: string,
 ): string | undefined {
   // Try to get name from schema metadata or use a default

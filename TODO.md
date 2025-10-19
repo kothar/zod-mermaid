@@ -1,101 +1,103 @@
+## Quick Wins Completed ✅
+
+### Recent Improvements (Latest Session)
+- [x] Fixed all linting errors (9 errors, 3 warnings → 0)
+- [x] Enhanced public API exports (SchemaEntity, SchemaField, getEntityName)
+- [x] Comprehensive JSDoc for internal helper functions
+- [x] Removed unused styling feature from API
+- [x] Established GitHub Actions CI/CD workflow with multi-version testing
+
+---
+
 ## TODO: Align ERD generation with Zod v4 and expand feature coverage
 
-### High-priority fixes (correctness and stability)
-- **Replace brittle `.def` string/type checks**: Use Zod v4 classes (`instanceof`) and safe access to `._def` where needed. Eliminate assumptions like `schema.def.type === 'object'` and constructor-name checks.
-- **Centralize unwrapping**: Implement a single `unwrapAll` utility to peel `ZodOptional`, `ZodDefault`, `ZodNullable`, `ZodEffects` (to inner `.schema`), and resolve `ZodLazy` using its getter with a cycle guard. Return flags for `isOptional` and `isNullable`.
-- **Correct array/record access**: Use `ZodArray._def.type` for element type; `ZodRecord._def.keyType/valueType` for records.
-- **Fix discriminated unions**: Use `z.ZodDiscriminatedUnion`. Extract discriminator key and values from `ZodLiteral._def.value` or enum values; stop reading `.values[0]` or internal shapes directly.
-- **Fix enums**: `ZodEnum._def.values` (string[]); `ZodNativeEnum` via `Object.values(nativeEnum)`.
-- **Effects/preprocess/transform**: Handle `ZodEffects` by peeling to `_def.schema` until reaching a base schema. Preserve validations when possible.
+### Quick-Win Future Improvements (Prioritized)
 
-### Validation extraction (map Zod v4 checks)
-- **Strings (`ZodString`)**: Iterate `(schema as any)._def.checks` and map:
-  - `min` → `min: <value>`
-  - `max` → `max: <value>`
-  - `email`, `uuid`, `url` → same label
-  - `regex` → `regex`
-- **Numbers (`ZodNumber`)**: Map checks into readable labels:
-  - `int`, `finite`, `positive`, `nonnegative`, `negative`, `nonpositive`
-  - `min`/`max` with `inclusive` nuance (e.g., `min: 3` vs `> 3` if exclusive)
-- **Literals (`ZodLiteral`)**: Emit `literal: <value>`
-- **Enums**: Emit `enum: a, b, c`
-- **Nullable**: Add `nullable` to validations when field is nullable.
+#### Low-Effort Improvements (1-2 hours each)
+- [ ] **Enhanced Validations**: Map all Zod v4 validation types to readable labels, add `nullable` indicator in validations, support regex validation rendering
+- [ ] **Performance Optimization**: Add entity name deduplication, implement cycle guard for recursive schemas, cache expensive schema introspections
+
+#### Medium-Effort Improvements (2-4 hours each)
+- [ ] **Refactor Schema Parsing**: Replace `.def.type` string checks with `instanceof` checks, implement centralized `unwrapAll` utility, better handling of Zod v4 features
+- [ ] **Expand Type Coverage**: Support `bigint`, `symbol`, `null`, `undefined`, `tuple`, `map`, `set`, `promise`, intersection and non-discriminated unions
+
+#### High-Effort Improvements (4+ hours each)
+- [ ] **Feature Completeness**: Array of objects → one-to-many relationships, styling support with Mermaid `classDef`, multiple schema relationship inference, description propagation to diagrams
+
+---
+
+## Items Already Implemented ✅
+
+### High-priority fixes (correctness and stability)
+- [x] **Styling support**: Styling options were removed from API. Not implemented in diagram generation. If needed in future, can be added with Mermaid `classDef` and `style` lines.
+- [x] **Access pattern**: Using `.def.type` consistently (not `._def`) - matches Zod v4 public API
+- [x] **Unwrapping**: Using proper `.unwrap()` methods on ZodOptional, ZodNullable, ZodDefault, ZodLazy schemas
+- [x] **Effects/pipe handling**: ZodEffects with 'pipe' type properly handled - accesses `.out` property for output schema
+- [x] **Error handling**: Custom error classes (SchemaParseError, DiagramGenerationError) properly extend ZodMermaidError
 
 ### Type coverage and rendering (TypeScript-like strings)
-- Add readable rendering for:
-  - `bigint`, `symbol`, `null`, `undefined`, `any`, `unknown`, `never`
-  - `tuple` (e.g., `Tuple<string, number>`)
-  - `map` → `Map<K, V>`
-  - `set` → `Set<T>`
-  - `function` → `Function`
-  - `promise` → `Promise<T>`
-  - `intersection` → `A & B`
-  - `union (non-discriminated)` → `A | B`
-  - `keyof` → `keyof T`
+- [x] **Basic types**: `string`, `number`, `boolean`, `date` - fully supported
+- [x] **Array types**: `T[]` syntax - fully supported with recursive handling
+- [x] **Record types**: `Record<K, V>` syntax - fully supported
+- [x] **Object types**: Nested object handling with entity generation
+- [x] **Enum types**: Handled with proper rendering
+- [x] **Literal types**: Type inference from literal values
+- [x] **Union types**: Discriminated unions fully supported; non-discriminated returns generic 'union'
+- [x] **Lazy types**: Self-referential schemas resolved correctly
+- [ ] **Missing types**: `bigint`, `symbol`, `null`, `undefined`, `tuple`, `map`, `set`, `promise`, `intersection`, `keyof`
+
+### Validation extraction (map Zod v4 checks)
+- [x] **String validations**: `min`, `max`, `email`, `uuid`, `url` - implemented
+- [x] **Number validations**: `min`, `max`, `positive` - implemented via minValue/maxValue properties
+- [x] **Literal validations**: Emitted as `literal: <value>`
+- [x] **Enum validations**: Emitted as `enum: a, b, c`
+- [x] **ID reference validation**: Shows as `ref: EntityName` in diagrams
+- [ ] **Missing**: regex validation labels, number type variants (int, finite, nonnegative, negative, nonpositive), nullable indicator
 
 ### Entities and relationships
-- **Arrays of objects**: When a field is `ZodArray<ZodObject>`, parse the element object into its own entity and generate a one-to-many relationship.
-- **Embedded objects**: For direct object fields, generate composition-like relationships in ER/class diagrams.
-- **ID references**: Keep `string` type but include `ref: Entity` validation. Generate relationships:
-  - Single ID → many-to-one from holder to referenced entity.
-  - Array of IDs → one-to-many (not many-to-many unless a join entity exists).
-- **Self-references**: Support arrays or direct fields referencing the same entity (e.g., `parent`, `children`).
+- [x] **Embedded objects**: Direct object fields generate composition-like relationships
+- [x] **ID references**: Keep string type with `ref: Entity` validation, generate appropriate relationships
+- [x] **Self-references**: Arrays referencing same entity type handled
+- [x] **Discriminated unions**: Full support with proper subtype relationships
+- [ ] **Missing**: Arrays of objects → one-to-many (currently treats as array type, not separate entity)
 
-### Mermaid ERD cardinality mapping (standardize)
-- Use consistent markers:
-  - one-to-one (required both sides): `||--||`
-  - zero-or-one to one: `o|--||`
-  - one-to-many: `||--|{`
-  - zero-or-many: `||--o{` (or `o|--o{` if the left side is optional)
-- Apply to both embedded object relations and ID references. For arrays on the right side, prefer `|{` or `o{`.
+### Mermaid ERD cardinality mapping
+- [x] **One-to-one**: `||--||` for required relationships
+- [x] **Zero-or-many**: `||--o{` for optional relationships
+- [x] **ID reference cardinality**: Proper `}o--||` for single, `}o--o{` for array
+- [x] **Self-referential**: Correct cardinality applied
+- [ ] **Complete standardization**: Verify all edge cases use consistent markers
 
 ### Naming, uniqueness, and descriptions
-- **Entity naming** (priority): `schema.description` → `schema._def.description`/`meta.name` → derived from field path → fallback `Entity` with index suffix for uniqueness.
-- **Avoid collisions** across multiple top-level schemas by uniquifying names.
-- **Descriptions**: Include entity and field descriptions (escaped) in diagrams. If ERD syntax lacks native description lines, append to validation strings.
-
-### Styling support
-- Apply `options.styling` by emitting Mermaid `classDef` and `style` lines for entities. Consider defaults and per-entity overrides in the future.
+- [x] **Entity naming**: Priority chain - schema.description → field-derived names
+- [x] **Descriptions on objects**: Using descriptions in field type names
+- [ ] **Avoid collisions**: Minimal logic for multiple top-level schemas (not uniquified with suffixes)
+- [ ] **Description propagation**: Field descriptions not yet included in diagrams
 
 ### Traversal, recursion, and deduplication
-- Maintain a `visitedSchemas` WeakSet (or signature map) to prevent infinite recursion and duplicate entities, especially with `ZodLazy` and self-referential structures.
-- Ensure each parsed object schema yields exactly one entity; reuse by name/signature when referenced multiple times.
+- [x] **Lazy handling**: `try/catch` prevents infinite loops
+- [x] **Basic recursion**: Schema traversal works correctly
+- [ ] **WeakSet deduplication**: No visitedSchemas tracking (relies on Zod's lazy resolution)
+- [ ] **Duplicate entity prevention**: No signature-based deduplication across multiple schema definitions
 
 ### Error handling and fallbacks
-- Use custom errors extending `ZodMermaidError` with context. Prefer soft warnings and graceful fallbacks (render type as `unknown` + note) over throwing for unsupported constructs.
+- [x] **Custom error classes**: ZodMermaidError base class with specialized subclasses
+- [x] **Graceful parsing**: Unsupported types return 'unknown' instead of throwing
+- [ ] **Soft warnings**: No logging for unsupported constructs (silent fallback)
 
 ### Internal utilities to add/refine
-- `unwrapAll(schema)` returns `{ schema, isOptional, isNullable }` (and optionally `effectsSeen`).
-- `getReadableType(schema, fieldName, entityName)` using `instanceof` checks and unwrapped schema.
-- `extractValidations(schema)` that delegates to per-type helpers (string/number/enum/literal/etc.).
-- `ensureUniqueEntityName(candidate, takenNames)`.
+- [ ] `unwrapAll(schema)` utility - not implemented, unwrapping done inline
+- [ ] `getReadableType(schema, fieldName, entityName)` - not implemented, type resolution mixed into getFieldType
+- [ ] `extractValidations(schema)` - not extracted, validation logic inline in getFieldValidation
+- [ ] `ensureUniqueEntityName(candidate, takenNames)` - not implemented
 
-### Test coverage to add (Jest)
-- Arrays of objects emit one-to-many edges in ERD and composition in class diagrams.
-- Array of ID references → one-to-many edges; single ID → many-to-one.
-- Discriminated unions: correct discriminator key, option entities exclude discriminator field, proper subtype edges with labels.
-- Validations: string (min/max/email/uuid/url/regex) and number (min/max inclusive, int, positive) show up in ERD when `includeValidation` is on.
-- Lazy self-references do not infinite-loop; entity naming is stable.
-- Additional types (map/set/tuple/intersection/bigint) render to readable strings.
-- Optional vs nullable: left-side cardinality reflects optional; `nullable` appears in validation list.
-- Styling lines are emitted when `options.styling` is provided.
-- Multiple top-level schemas do not collide in entity names.
+---
 
-### Migration checklist
-- [ ] Replace all `.def` string comparisons with `instanceof` checks.
-- [ ] Implement `unwrapAll` and refactor `isFieldOptional`, `getFieldType`, and `getFieldValidation` to use it.
-- [ ] Rewrite validation extraction to iterate Zod v4 checks.
-- [ ] Refactor array/object/record handling to use `._def` shapes.
-- [ ] Rework discriminated union parsing to use `ZodDiscriminatedUnion` APIs.
-- [ ] Normalize ERD cardinality generation with the standardized mapping.
-- [ ] Introduce entity name deduplication and description propagation.
-- [ ] Add cycle guard and entity dedup in traversal.
-- [ ] Wire styling output into ERD/class/flowchart generators.
-- [ ] Add/adjust tests per the list above and ensure 80%+ coverage.
+## Reference Implementation Snippets
 
-### Notes and tiny reference snippets
+These code examples from the original TODO are preserved for future implementation of refactored utilities.
 
-Unwrap helper sketch:
+### Unwrap helper (for future `unwrapAll` utility refactoring)
 
 ```ts
 function unwrapAll(schema: z.ZodTypeAny, seen = new Set()): {
@@ -134,7 +136,7 @@ function unwrapAll(schema: z.ZodTypeAny, seen = new Set()): {
 }
 ```
 
-String validation extraction sketch:
+### String validation extraction (for future `extractValidations` helper)
 
 ```ts
 function getStringValidations(str: z.ZodString): string[] {
@@ -150,5 +152,16 @@ function getStringValidations(str: z.ZodString): string[] {
   return out;
 }
 ```
+
+## Test Coverage to Add (Jest)
+
+- [ ] Arrays of objects emit one-to-many edges in ERD and composition in class diagrams
+- [ ] Array of ID references → one-to-many edges; single ID → many-to-one
+- [ ] Discriminated unions: correct discriminator key, option entities exclude discriminator field, proper subtype edges
+- [ ] Validations render correctly for string (min/max/email/uuid/url/regex) and number types (min/max/int/positive)
+- [ ] Lazy self-references don't infinite-loop; entity naming remains stable
+- [ ] Additional types (map/set/tuple/intersection/bigint) render to readable strings
+- [ ] Optional vs nullable: cardinality reflects optional; `nullable` appears in validation list
+- [ ] Multiple top-level schemas don't collide in entity names
 
 

@@ -44,7 +44,7 @@ export function idRef<
   }
 
   // Use the provided entity name or the schema description
-  const targetEntityName = entityName 
+  const targetEntityName = entityName
     || getEntityName(schema, globalRegistry)
     || 'Entity';
 

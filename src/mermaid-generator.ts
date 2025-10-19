@@ -1,7 +1,8 @@
-import { GlobalMeta, z, ZodNumber } from 'zod';
+import { $ZodRegistry } from 'zod/v4/core/registries.cjs';
+
+import { z, ZodNumber } from 'zod';
 import type { MermaidOptions, SchemaEntity } from './mermaid-types';
 import { DiagramGenerationError, SchemaParseError, ZodMermaidError } from './errors';
-import { $ZodRegistry } from 'zod/v4/core/registries.cjs';
 import { getEntityName } from './entity';
 
 /**
@@ -12,10 +13,6 @@ const DEFAULT_OPTIONS: Required<Omit<MermaidOptions, 'metadataRegistry'>> & Pick
   includeValidation: true,
   includeOptional: true,
   entityName: 'Entity',
-  styling: {
-    primaryColor: '#4CAF50',
-    secondaryColor: '#2196F3',
-  },
   metadataRegistry: z.globalRegistry,
 };
 
@@ -83,7 +80,7 @@ export function generateMermaidDiagram(
 function parseSchemaToEntities(
   schema: z.ZodTypeAny,
   options: Required<Omit<MermaidOptions, 'metadataRegistry'>>,
-  registry: $ZodRegistry<GlobalMeta>,
+  registry: $ZodRegistry<any>,
   parentFieldName?: string,
 ): SchemaEntity[] {
   const entities: SchemaEntity[] = [];
@@ -106,9 +103,6 @@ function parseSchemaToEntities(
     const objectSchema = schema as z.ZodObject<Record<string, z.ZodTypeAny>>;
     const { shape } = objectSchema;
     const entityName = getEntityName(schema, registry, parentFieldName) || options.entityName;
-
-    // Resolve brand key for ID field if present to help disambiguate entities with same name
-    const idFieldName = getIdFieldNameFromRegistryOrDefault(schema, registry);
 
     const fields = Object.entries(shape).map(([key, value]) => {
       const fieldSchema = value as z.ZodTypeAny;
@@ -201,7 +195,9 @@ function parseSchemaToEntities(
               key,
             );
             entities.push(...nestedEntities);
-          } else if (resolvedSchema.def.type === 'union' && (resolvedSchema.def as any).discriminator) {
+          } else if (
+            resolvedSchema.def.type === 'union' && (resolvedSchema.def as any).discriminator
+          ) {
             // Handle discriminated unions in lazy types
             const nestedEntities = parseSchemaToEntities(
               resolvedSchema,
@@ -268,7 +264,8 @@ function parseSchemaToEntities(
         const discriminatorValue: string = String(rawValue ?? '');
 
         // Use the schema description if available, otherwise fall back to the generic naming
-        const optionEntityName = optionSchema.description || `${unionEntityName}_${discriminatorValue}`;
+        const optionEntityName = optionSchema.description
+          || `${unionEntityName}_${discriminatorValue}`;
 
         // Create the option entity with all fields except the discriminator
         const optionFields = Object.entries(optionDef.shape)
@@ -283,7 +280,7 @@ function parseSchemaToEntities(
               name: key,
               type: fieldType,
               isOptional,
-              validation
+              validation,
             };
           });
 
@@ -341,11 +338,6 @@ function parseSchemaToEntities(
   }
 
   return entities;
-}
-
-function getIdFieldNameFromRegistryOrDefault(schema: z.ZodTypeAny, registry: $ZodRegistry<GlobalMeta>): string {
-  const meta = registry.get(schema);
-  return meta?.['idFieldName'] as string | undefined ?? 'id';
 }
 
 /**
@@ -475,8 +467,9 @@ function getFieldType(schema: z.ZodTypeAny, fieldName: string, entityName: strin
 
 /**
  * Checks if a field is optional
- * @param schema - The Zod schema
- * @returns True if the field is optional
+ * @param schema - The Zod schema to check
+ * @returns True if the field is optional, false otherwise
+ * @internal
  */
 function isFieldOptional(schema: z.ZodTypeAny): boolean {
   const { type } = schema.def;
@@ -505,10 +498,16 @@ function isFieldOptional(schema: z.ZodTypeAny): boolean {
 
 /**
  * Gets validation rules for a field
- * @param schema - The Zod schema
- * @returns Array of validation rules
+ * @param schema - The Zod schema to extract validations from
+ * @param registry - The Zod metadata registry for ID reference metadata
+ * @returns Array of validation rule strings (e.g., ['min: 5', 'max: 100', 'email'])
+ * @internal
+ * @remarks
+ * Supports extraction of validations from string, number, enum, and literal types.
+ * Handles unwrapping of optional, nullable, default, and lazy schemas.
+ * Also extracts ID reference metadata when present.
  */
-function getFieldValidation(schema: z.ZodTypeAny, registry: $ZodRegistry<GlobalMeta>): string[] {
+function getFieldValidation(schema: z.ZodTypeAny, registry: $ZodRegistry<any>): string[] {
   const validations: string[] = [];
   const { type } = schema.def;
 
@@ -589,7 +588,11 @@ function getFieldValidation(schema: z.ZodTypeAny, registry: $ZodRegistry<GlobalM
   // Check for number validations
   if (type === 'number') {
     const num = schema as ZodNumber;
-    if (typeof num.minValue === 'number' && Number.isFinite(num.minValue) && num.minValue !== -Infinity) {
+    if (
+      typeof num.minValue === 'number'
+      && Number.isFinite(num.minValue)
+      && num.minValue !== -Infinity
+    ) {
       if (num.minValue === 0) {
         validations.push('positive');
       } else {
@@ -623,9 +626,14 @@ function getFieldValidation(schema: z.ZodTypeAny, registry: $ZodRegistry<GlobalM
 
 /**
  * Generates an Entity-Relationship diagram
- * @param entities - The schema entities
- * @param options - Diagram options
- * @returns ER diagram string
+ * @param entities - The parsed schema entities with fields and relationships
+ * @param options - Diagram generation options including validation display settings
+ * @returns A complete Mermaid ER diagram string
+ * @internal
+ * @remarks
+ * Creates ER syntax with entity definitions, field types, validation annotations,
+ * and relationship cardinality notation. Handles embedded objects, ID references,
+ * self-referential relationships, and discriminated unions.
  */
 function generateERDiagram(
   entities: SchemaEntity[],
@@ -732,7 +740,9 @@ function generateERDiagram(
       const { baseEntity, subtypes } = entity.unionRelationships;
       for (const subtype of subtypes) {
         // Use discriminator value as the relationship label
-        lines.push(`    ${baseEntity} ||--|| ${subtype.name} : "${subtype.discriminatorValue}"`);
+        lines.push(
+          `    ${baseEntity} ||--|| ${subtype.name} : "${subtype.discriminatorValue}"`,
+        );
       }
     }
   }
@@ -740,6 +750,17 @@ function generateERDiagram(
   return lines.join('\n');
 }
 
+/**
+ * Finds an entity by its name in the list of schema entities.
+ *
+ * This function is used to find the full entity definition when an ID reference
+ * is encountered in a field's type. It's primarily for placeholder entities
+ * that represent ID references that are not directly defined in the current schema.
+ *
+ * @param entities - The list of parsed schema entities.
+ * @param name - The name of the entity to find.
+ * @returns The entity definition if found, otherwise undefined.
+ */
 function findEntityByNameAndBrand(
   entities: SchemaEntity[],
   name: string,
@@ -749,9 +770,13 @@ function findEntityByNameAndBrand(
 
 /**
  * Generates a Class diagram
- * @param entities - The schema entities
- * @param options - Diagram options
- * @returns Class diagram string
+ * @param entities - The parsed schema entities with fields and relationships
+ * @returns A complete Mermaid class diagram string
+ * @internal
+ * @remarks
+ * Creates UML-style class syntax with properties and associations.
+ * Uses composition notation (*--) for embedded relationships and
+ * reference arrows (-->) for ID references.
  */
 function generateClassDiagram(entities: SchemaEntity[]): string {
   const lines: string[] = ['classDiagram'];
@@ -832,9 +857,13 @@ function generateClassDiagram(entities: SchemaEntity[]): string {
 
 /**
  * Generates a Flowchart diagram
- * @param entities - The schema entities
- * @param options - Diagram options
- * @returns Flowchart string
+ * @param entities - The parsed schema entities with fields and relationships
+ * @returns A complete Mermaid flowchart diagram string
+ * @internal
+ * @remarks
+ * Creates a hierarchical flowchart showing entities, their fields, and relationships.
+ * Uses solid arrows for embedded relationships and dotted arrows for ID references
+ * and union subtypes.
  */
 function generateFlowchartDiagram(entities: SchemaEntity[]): string {
   const lines: string[] = ['flowchart TD'];
