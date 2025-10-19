@@ -383,6 +383,7 @@ function getEntityName(
   if (meta?.entityName) return meta.entityName;
   if (meta?.title) return meta.title;
   if (meta?.description) return meta.description;
+  if (schema.description) return schema.description;
 
   // For nested objects, use the parent field name to create a descriptive name
   if (parentFieldName) {
@@ -394,7 +395,7 @@ function getEntityName(
 
 function getEntityDescription(schema: z.ZodTypeAny, registry: unknown): string | undefined {
   const meta = getSchemaMetaFromRegistry(schema, registry);
-  return meta?.description ?? undefined;
+  return meta?.description ?? schema.description ?? undefined;
 }
 
 function getFieldDescription(
