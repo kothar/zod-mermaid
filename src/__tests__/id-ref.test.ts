@@ -21,8 +21,8 @@ describe('idRef', () => {
     const refField = idRef(CustomSchema, 'uuid');
     expect(refField.safeParse('abc').success).toBe(true);
 
-    const meta = (refField as any)._def?.metadata ?? {};
-    expect(meta.targetEntityName).toBe('Custom');
+    const meta = globalRegistry.get(refField);
+    expect(meta?.['targetEntityName']).toBe('Custom');
   });
 
   it('should use a custom entity name if provided', () => {

@@ -16,10 +16,10 @@ import { getEntityName } from './entity';
  * import { z } from 'zod';
  * import { idRef } from './id-ref';
  *
- * const CustomerSchema = z.object({ id: z.string() });
+ * const CustomerSchema = z.object({ id: z.string() }).describe('Customer');
  * const OrderSchema = z.object({
  *   id: z.string(),
- *   customerId: idRef(CustomerSchema), // Inferred as ZodString
+ *   customerId: idRef(CustomerSchema), // Inferred as ZodString, references 'Customer'
  * });
  */
 export function idRef<
@@ -45,28 +45,12 @@ export function idRef<
 
   // Use the provided entity name or the schema description
   const targetEntityName = entityName 
-    || getEntityName(schema, 'Entity', globalRegistry)
-    || getStringBrandKey(idFieldSchema);
+    || getEntityName(schema, globalRegistry)
+    || 'Entity';
 
   // Create a new schema with the same type and validation as the ID field
   const resultSchema = idFieldSchema.clone().meta({
     targetEntityName,
   });
   return resultSchema as T['shape'][K];
-}
-
-
-// Extracts a reasonable brand key for string IDs branded via z.string().brand('Key')
-export function getStringBrandKey(schema: z.ZodTypeAny): unknown {
-  const def: any = (schema as any).def ?? (schema as any)._def;
-  if (!def) return undefined;
-  // Zod 4 keeps brand in def.brand for branded schemas
-  if (def.brand !== undefined) return def.brand;
-  if (Array.isArray(def.branding) && def.branding.length > 0) return def.branding.slice();
-  // Some builds might expose checks with brand info
-  if (def.checks) {
-    const brandCheck = def.checks.find((c: any) => c.kind === 'brand' || c.brand !== undefined);
-    if (brandCheck) return brandCheck.brand ?? brandCheck.kind;
-  }
-  return undefined;
 }

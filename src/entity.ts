@@ -1,5 +1,4 @@
 import { GlobalMeta, z } from 'zod';
-import { MermaidOptions } from './mermaid-types';
 import { $ZodRegistry } from 'zod/v4/core/registries.cjs';
 
 /**
@@ -11,10 +10,9 @@ import { $ZodRegistry } from 'zod/v4/core/registries.cjs';
  */
 export function getEntityName(
   schema: z.ZodTypeAny,
-  defaultEntityName: string,
   registry: $ZodRegistry<GlobalMeta>,
   parentFieldName?: string,
-): string {
+): string | undefined {
   // Try to get name from schema metadata or use a default
   const meta = registry.get(schema);
   if (meta) {
@@ -28,13 +26,7 @@ export function getEntityName(
     return parentFieldName.charAt(0).toUpperCase() + parentFieldName.slice(1);
   }
 
-  // Fallback to configured default entity name for top-level entities
-  const schemaType = schema.constructor.name;
-  if (schemaType.includes('Object') || schemaType.includes('ZodDiscriminatedUnion')) {
-    return defaultEntityName;
-  }
-
-  return defaultEntityName;
+  return undefined;
 }
 
 function removeWhitespace(str: string): string {

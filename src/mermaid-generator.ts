@@ -3,7 +3,6 @@ import type { MermaidOptions, SchemaEntity } from './mermaid-types';
 import { DiagramGenerationError, SchemaParseError, ZodMermaidError } from './errors';
 import { $ZodRegistry } from 'zod/v4/core/registries.cjs';
 import { getEntityName } from './entity';
-import { getStringBrandKey } from './id-ref';
 
 /**
  * Default options for Mermaid diagram generation
@@ -106,20 +105,10 @@ function parseSchemaToEntities(
   if (schema.def.type === 'object') {
     const objectSchema = schema as z.ZodObject<Record<string, z.ZodTypeAny>>;
     const { shape } = objectSchema;
-    const entityName = getEntityName(schema, options.entityName, registry, parentFieldName);
+    const entityName = getEntityName(schema, registry, parentFieldName) || options.entityName;
 
     // Resolve brand key for ID field if present to help disambiguate entities with same name
     const idFieldName = getIdFieldNameFromRegistryOrDefault(schema, registry);
-    let idBrandKey: unknown = undefined;
-    if (shape && (idFieldName in shape)) {
-      const idFieldSchema = (shape as any)[idFieldName] as z.ZodTypeAny;
-      idBrandKey = getStringBrandKey(idFieldSchema);
-      // Fallback to any internal branding array if present
-      const idDef: any = (idFieldSchema as any).def ?? (idFieldSchema as any)._def;
-      if (!idBrandKey && idDef && (idDef.brand || idDef.branding)) {
-        idBrandKey = idDef.brand ?? idDef.branding;
-      }
-    }
 
     const fields = Object.entries(shape).map(([key, value]) => {
       const fieldSchema = value as z.ZodTypeAny;
@@ -131,32 +120,27 @@ function parseSchemaToEntities(
       // Handle direct ID refs, optional ID refs, and arrays of ID refs
       let isIdRef = false;
       let referencedEntity: string | undefined = undefined;
-      let referencedBrandKey: unknown = undefined;
 
       const fieldMeta = registry.get(fieldSchema);
       if (fieldType === 'string' && fieldMeta?.['targetEntityName']) {
         isIdRef = true;
         referencedEntity = fieldMeta['targetEntityName'] as string;
-        referencedBrandKey =
-          (fieldSchema as any).__idBranding ?? getStringBrandKey(fieldSchema);
       } else if (isOptional && fieldSchema.def.type === 'optional') {
         // For optional fields, check if the unwrapped schema is an ID ref
         const unwrappedSchema = (fieldSchema as z.ZodOptional<any>).unwrap();
-        if (unwrappedSchema.def.type === 'string' && (unwrappedSchema as any).__idRef) {
+        const unwrappedMeta = registry.get(unwrappedSchema);
+        if (unwrappedSchema.def.type === 'string' && unwrappedMeta?.['targetEntityName']) {
           isIdRef = true;
-          referencedEntity = (unwrappedSchema as any).__idRef;
-          referencedBrandKey =
-            (unwrappedSchema as any).__idBranding ?? getStringBrandKey(unwrappedSchema);
+          referencedEntity = unwrappedMeta['targetEntityName'] as string;
         }
       } else if (fieldSchema.def.type === 'array') {
         // For arrays, check if the element is an ID ref
         const arraySchema = fieldSchema as z.ZodArray<any>;
         const elementSchema = arraySchema.element;
-        if (elementSchema.def.type === 'string' && (elementSchema as any).__idRef) {
+        const elementMeta = registry.get(elementSchema);
+        if (elementSchema.def.type === 'string' && elementMeta?.['targetEntityName']) {
           isIdRef = true;
-          referencedEntity = (elementSchema as any).__idRef;
-          referencedBrandKey =
-            (elementSchema as any).__idBranding ?? getStringBrandKey(elementSchema);
+          referencedEntity = elementMeta['targetEntityName'] as string;
         }
       }
 
@@ -171,14 +155,12 @@ function parseSchemaToEntities(
         validation,
         isIdReference: isIdRef,
         referencedEntity,
-        referencedBrandKey,
       };
     });
 
     entities.push({
       name: entityName,
       fields,
-      idBrandKey,
     });
 
     // Recursively parse nested objects and unions
@@ -242,7 +224,7 @@ function parseSchemaToEntities(
     const { options: unionOptions, discriminator } = unionDef;
 
     // Create a base entity for the union
-    const unionEntityName = getEntityName(schema, options.entityName, registry, parentFieldName);
+    const unionEntityName = getEntityName(schema, registry, parentFieldName) || options.entityName;
 
     // Extract discriminator values
     const discriminatorValues = unionOptions.map((opt: any) => {
@@ -387,11 +369,6 @@ function getIdFieldNameFromRegistryOrDefault(schema: z.ZodTypeAny, registry: $Zo
  */
 function getFieldType(schema: z.ZodTypeAny, fieldName: string, entityName: string): string {
   const { type } = schema.def;
-
-  // For ID references, return 'string' - the referenced entity will be in validation
-  if (type === 'string' && (schema as any).__idRef) {
-    return 'string';
-  }
 
   switch (type) {
   case 'string':
@@ -729,7 +706,6 @@ function generateERDiagram(
         const target = findEntityByNameAndBrand(
           entities,
           field.referencedEntity,
-          field.referencedBrandKey,
         );
         const targetName = target?.name ?? field.referencedEntity;
         lines.push(
@@ -767,23 +743,8 @@ function generateERDiagram(
 function findEntityByNameAndBrand(
   entities: SchemaEntity[],
   name: string,
-  brandKey: unknown,
 ): SchemaEntity | undefined {
-  if (brandKey === undefined) {
-    return entities.find(e => e.name === name);
-  }
-  const byName = entities.filter(e => e.name === name);
-  if (byName.length === 0) return undefined;
-  const match = byName.find(e => deepEqual(e.idBrandKey, brandKey));
-  return match ?? byName[0];
-}
-
-function deepEqual(a: unknown, b: unknown): boolean {
-  try {
-    return JSON.stringify(a) === JSON.stringify(b);
-  } catch {
-    return a === b;
-  }
+  return entities.find(e => e.name === name);
 }
 
 /**

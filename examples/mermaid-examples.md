@@ -359,6 +359,7 @@ erDiagram
         string status "enum: pending, shipped, delivered"
     }
     Order }o--|| Customer : "customerId"
+    Order }o--o{ Product : "productIds"
 ```
 
 ### Class Diagram
@@ -374,7 +375,10 @@ classDiagram
     }
     class Customer {
     }
+    class Product {
+    }
     Order --> Customer : customerId (ref)
+    Order --> Product : productIds (ref)
 ```
 
 ### Flowchart Diagram
@@ -382,6 +386,7 @@ classDiagram
 flowchart TD
     Order["Order"]
     Customer["Customer"]
+    Product["Product"]
     Order_id["id: string"]
     Order --> Order_id["id: string"]
     Order_customerId["customerId: string"]
@@ -389,6 +394,7 @@ flowchart TD
     Order_customerId["customerId: string"] -.-> Customer
     Order_productIds["productIds: string[]"]
     Order --> Order_productIds["productIds: string[]"]
+    Order_productIds["productIds: string[]"] -.-> Product
     Order_quantity["quantity: number"]
     Order --> Order_quantity["quantity: number"]
     Order_orderDate["orderDate: date"]
@@ -503,28 +509,23 @@ const EventSchema = z.object({
 ```typescript
 const CustomerSchema = z.object({
   id: z.uuid(),
-  name: z.string(),
-  email: z.email(),
 }).describe('Customer');
 
-const ProductSchema = z.object({
+const ProductRefSchema = z.object({
   id: z.uuid(),
-  name: z.string(),
-  price: z.number().positive(),
-  category: z.enum(['electronics', 'clothing', 'books']),
 }).describe('Product');
 
 const OrderSchema = z.object({
   id: z.uuid(),
   customerId: idRef(CustomerSchema),
-  productId: idRef(ProductSchema),
+  productIds: z.array(idRef(ProductRefSchema)),
   quantity: z.number().positive(),
   orderDate: z.date(),
   status: z.enum(['pending', 'shipped', 'delivered']),
 }).describe('Order');
 ```
 
-**Note:** The `idRef()` function creates string fields that reference other entities by ID. This allows you to show relationships without embedding the full entity structure. The library automatically generates placeholder entities and relationships for referenced entities.
+**Note:** The `idRef()` function creates string fields that reference other entities by ID. This allows you to show relationships without embedding the full entity structure. The library automatically generates placeholder entities and relationships for referenced entities. Use `.describe()` on your schemas to specify entity names.
 
 ## Usage
 

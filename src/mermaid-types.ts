@@ -75,11 +75,6 @@ export interface SchemaField {
    * The name of the entity this field references (for ID references)
    */
   referencedEntity?: string | undefined;
-  /**
-   * The brand key captured from the referenced entity's ID field, when available.
-   * Used to disambiguate references when entity names are identical.
-   */
-  referencedBrandKey?: unknown;
 }
 
 /**
@@ -97,10 +92,4 @@ export interface SchemaEntity {
     baseEntity: string;
     subtypes: Array<{ name: string; discriminatorValue: string }>;
   };
-
-  /**
-   * Brand key derived from the entity's ID field (if branded).
-   * Used for resolving references when names are ambiguous.
-   */
-  idBrandKey?: unknown;
 }
