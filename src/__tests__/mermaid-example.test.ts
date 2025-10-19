@@ -94,7 +94,7 @@ describe('Mermaid Example Generation', () => {
       type: z.literal('com.example.event.product'),
       date: z.date(),
       data: ProductEventPayloadSchema,
-    }).describe('Event');
+    }).meta({title: 'Event'});
 
     // Generate different types of diagrams
     const erDiagram = generateMermaidDiagram(UserSchema, { diagramType: 'er' });
@@ -338,7 +338,7 @@ const EventSchema = z.object({
   type: z.literal('com.example.event.product'),
   date: z.date(),
   data: ProductEventPayloadSchema,
-}).describe('Event');
+  }).meta({title: 'Event'});
 \`\`\`
 
 ### ID Reference Schema

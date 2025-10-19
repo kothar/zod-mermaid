@@ -240,7 +240,7 @@ flowchart TD
 ### Entity-Relationship Diagram
 ```mermaid
 erDiagram
-    Event {
+    Entity {
         string id
         string type "literal: com.example.event.product"
         date date
@@ -264,7 +264,7 @@ erDiagram
         string description
         string location
     }
-    Event ||--|| ProductEventPayload : "data"
+    Entity ||--|| ProductEventPayload : "data"
     ProductEventPayload ||--|| AddProductEvent : "addProduct"
     ProductEventPayload ||--|| RemoveProductEvent : "removeProduct"
     ProductEventPayload ||--|| UpdateProductEvent : "updateProduct"
@@ -273,7 +273,7 @@ erDiagram
 ### Class Diagram
 ```mermaid
 classDiagram
-    class Event {
+    class Entity {
         +id: string
         +type: string
         +date: date
@@ -297,7 +297,7 @@ classDiagram
         +description: string
         +location: string
     }
-    Event *-- ProductEventPayload : data
+    Entity *-- ProductEventPayload : data
     ProductEventPayload <|-- AddProductEvent : addProduct
     ProductEventPayload <|-- RemoveProductEvent : removeProduct
     ProductEventPayload <|-- UpdateProductEvent : updateProduct
@@ -306,20 +306,20 @@ classDiagram
 ### Flowchart Diagram
 ```mermaid
 flowchart TD
-    Event["Event"]
+    Entity["Entity"]
     ProductEventPayload["ProductEventPayload"]
     AddProductEvent["AddProductEvent"]
     RemoveProductEvent["RemoveProductEvent"]
     UpdateProductEvent["UpdateProductEvent"]
-    Event_id["id: string"]
-    Event --> Event_id["id: string"]
-    Event_type["type: string"]
-    Event --> Event_type["type: string"]
-    Event_date["date: date"]
-    Event --> Event_date["date: date"]
-    Event_data["data: ProductEventPayload\nProductEventPayload"]
-    Event --> Event_data["data: ProductEventPayload\nProductEventPayload"]
-    Event_data["data: ProductEventPayload\nProductEventPayload"] --> ProductEventPayload
+    Entity_id["id: string"]
+    Entity --> Entity_id["id: string"]
+    Entity_type["type: string"]
+    Entity --> Entity_type["type: string"]
+    Entity_date["date: date"]
+    Entity --> Entity_date["date: date"]
+    Entity_data["data: ProductEventPayload\nProductEventPayload"]
+    Entity --> Entity_data["data: ProductEventPayload\nProductEventPayload"]
+    Entity_data["data: ProductEventPayload\nProductEventPayload"] --> ProductEventPayload
     ProductEventPayload_eventType["eventType: string"]
     ProductEventPayload --> ProductEventPayload_eventType["eventType: string"]
     AddProductEvent_id["id: string"]
@@ -502,7 +502,7 @@ const EventSchema = z.object({
   type: z.literal('com.example.event.product'),
   date: z.date(),
   data: ProductEventPayloadSchema,
-}).describe('Event');
+  }).meta({title: 'Event'});
 ```
 
 ### ID Reference Schema

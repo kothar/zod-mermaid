@@ -16,8 +16,6 @@ const DEFAULT_OPTIONS: Required<Omit<MermaidOptions, 'metadataRegistry'>> & Pick
   },
   metadataRegistry: undefined,
 };
-// Note: No custom metadata registry implementation here. We defer to Zod's built-in
-// schema description/meta and any global/custom registry exposed by Zod itself.
 
 /**
  * Generates a Mermaid diagram from one or more Zod schemas
@@ -382,6 +380,7 @@ function getEntityName(
 ): string {
   // Try to get name from schema metadata or use a default
   const meta = getSchemaMetaFromRegistry(schema, registry);
+  if (meta?.title) return meta.title;
   if (meta?.entityName) return meta.entityName;
   if (schema.description) return schema.description;
 
@@ -432,6 +431,7 @@ function getStringBrandKey(schema: z.ZodTypeAny): unknown {
 
 // Helpers to interop with Zod's meta/registry (without imposing our own types)
 type LooseSchemaMeta = {
+  title?: string;
   entityName?: string;
   description?: string;
   idFieldName?: string;
