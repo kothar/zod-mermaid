@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { generateMermaidDiagram } from '../mermaid-generator';
 import { idRef } from '../id-ref';
-import { validateMermaidSyntax, extractMermaidDiagrams } from '../test/mermaid-validator';
+import { validateMermaidSyntax, extractMermaidDiagrams } from './mermaid-validator';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
