@@ -773,7 +773,8 @@ function generateERDiagram(
       parts.push(fieldLine);
       // Build annotations: description and validation
       const annotations: string[] = [];
-      if (field.description) annotations.push(field.description);
+      const desc = field.description?.trim();
+      if (desc && desc !== fieldType) annotations.push(desc);
       if (options.includeValidation && validation?.length) annotations.push(...validation);
       const validationString = annotations.length ? ` "${annotations.join(', ')}"` : '';
 
@@ -890,7 +891,8 @@ function generateClassDiagram(entities: SchemaEntity[]): string {
     for (const field of entity.fields) {
       const visibility = field.isOptional ? '+' : '+';
       const base = `        ${visibility}${field.name}: ${field.type}`;
-      const suffix = field.description ? ` // ${field.description}` : '';
+      const desc = field.description?.trim();
+      const suffix = desc && desc !== field.type ? ` // ${desc}` : '';
       const fieldLine = `${base}${suffix}`;
       lines.push(fieldLine);
     }
@@ -973,8 +975,9 @@ function generateFlowchartDiagram(entities: SchemaEntity[]): string {
   // Add field nodes and their connections to parent entities
   for (const entity of entities) {
     for (const field of entity.fields) {
-      const label = field.description
-        ? `${field.name}: ${field.type}\\n${field.description}`
+      const desc = field.description?.trim();
+      const label = desc && desc !== field.type
+        ? `${field.name}: ${field.type}\\n${desc}`
         : `${field.name}: ${field.type}`;
       const fieldNode = `${entity.name}_${field.name}["${label}"]`;
       lines.push(`    ${fieldNode}`);
