@@ -382,15 +382,20 @@ function getEntityName(
   const meta = getSchemaMetaFromRegistry(schema, registry);
   if (meta?.entityName) return meta.entityName;
   if (meta?.title) return meta.title;
-  if (meta?.description) return meta.description;
-  if (schema.description) return schema.description;
+  // Do NOT use description for the identifier; it may be multi-token
 
   // For nested objects, use the parent field name to create a descriptive name
   if (parentFieldName) {
     return parentFieldName.charAt(0).toUpperCase() + parentFieldName.slice(1);
   }
 
-  return 'Schema';
+  // Fallback to configured default entity name for top-level entities
+  const schemaType = schema.constructor.name;
+  if (schemaType.includes('Object') || schemaType.includes('ZodDiscriminatedUnion')) {
+    return options.entityName;
+  }
+
+  return options.entityName;
 }
 
 function getEntityDescription(schema: z.ZodTypeAny, registry: unknown): string | undefined {
