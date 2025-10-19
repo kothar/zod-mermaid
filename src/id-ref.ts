@@ -1,4 +1,5 @@
-import { z } from 'zod';
+import { globalRegistry, z } from 'zod';
+import { getEntityName } from './entity';
 
 /**
  * Creates a field that references another entity by ID, inferring the type from the referenced
@@ -15,10 +16,10 @@ import { z } from 'zod';
  * import { z } from 'zod';
  * import { idRef } from './id-ref';
  *
- * const CustomerSchema = z.object({ id: z.string() });
+ * const CustomerSchema = z.object({ id: z.string() }).describe('Customer');
  * const OrderSchema = z.object({
  *   id: z.string(),
- *   customerId: idRef(CustomerSchema), // Inferred as ZodString
+ *   customerId: idRef(CustomerSchema), // Inferred as ZodString, references 'Customer'
  * });
  */
 export function idRef<
@@ -43,13 +44,13 @@ export function idRef<
   }
 
   // Use the provided entity name or the schema description
-  const targetEntityName = entityName || schema.description || 'Unknown';
+  const targetEntityName = entityName
+    || getEntityName(schema, globalRegistry)
+    || 'Entity';
 
   // Create a new schema with the same type and validation as the ID field
-  const resultSchema = idFieldSchema.clone();
-
-  // Add metadata to indicate this is an ID reference
-  (resultSchema as any).__idRef = targetEntityName;
-
+  const resultSchema = idFieldSchema.clone().meta({
+    targetEntityName,
+  });
   return resultSchema as T['shape'][K];
 }

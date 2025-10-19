@@ -1,3 +1,5 @@
+import { $ZodRegistry } from 'zod/v4/core/registries.cjs';
+
 /**
  * Supported Mermaid diagram types
  */
@@ -32,21 +34,10 @@ export interface MermaidOptions {
   entityName?: string;
 
   /**
-   * Custom styling options
+   * Custom Zod metadata registry to use instead of the global one.
+   * If omitted, the Zod global registry (if available) and schema-level metadata are used.
    */
-  styling?: {
-    /**
-     * Primary color for entities
-     * @default '#4CAF50'
-     */
-    primaryColor?: string;
-
-    /**
-     * Secondary color for relationships
-     * @default '#2196F3'
-     */
-    secondaryColor?: string;
-  };
+  metadataRegistry?: $ZodRegistry<any>;
 }
 
 /**
@@ -74,7 +65,7 @@ export interface SchemaField {
 export interface SchemaEntity {
   name: string;
   fields: SchemaField[];
-  description?: string | undefined;
+
   /**
    * Union relationships - for discriminated unions
    * Maps from base union entity to its subtypes with discriminator values

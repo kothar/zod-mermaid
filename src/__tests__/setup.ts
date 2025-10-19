@@ -1,3 +1,5 @@
+import { jest } from '@jest/globals';
+
 /**
  * Test setup file for Jest
  * This file is automatically loaded before each test

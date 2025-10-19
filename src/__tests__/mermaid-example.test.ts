@@ -94,7 +94,7 @@ describe('Mermaid Example Generation', () => {
       type: z.literal('com.example.event.product'),
       date: z.date(),
       data: ProductEventPayloadSchema,
-    }).describe('Event');
+    }).meta({ title: 'Event', description: 'Event entity via registry meta' });
 
     // Generate different types of diagrams
     const erDiagram = generateMermaidDiagram(UserSchema, { diagramType: 'er' });
@@ -118,15 +118,10 @@ describe('Mermaid Example Generation', () => {
     // ID Reference Example
     const CustomerSchema = z.object({
       id: z.uuid(),
-      name: z.string(),
-      email: z.email(),
     }).describe('Customer');
 
     const ProductRefSchema = z.object({
       id: z.uuid(),
-      name: z.string(),
-      price: z.number().positive(),
-      category: z.enum(['electronics', 'clothing', 'books']),
     }).describe('Product');
 
     const OrderSchema = z.object({
@@ -338,35 +333,30 @@ const EventSchema = z.object({
   type: z.literal('com.example.event.product'),
   date: z.date(),
   data: ProductEventPayloadSchema,
-}).describe('Event');
+  }).meta({title: 'Event'});
 \`\`\`
 
 ### ID Reference Schema
 \`\`\`typescript
 const CustomerSchema = z.object({
   id: z.uuid(),
-  name: z.string(),
-  email: z.email(),
 }).describe('Customer');
 
-const ProductSchema = z.object({
+const ProductRefSchema = z.object({
   id: z.uuid(),
-  name: z.string(),
-  price: z.number().positive(),
-  category: z.enum(['electronics', 'clothing', 'books']),
 }).describe('Product');
 
 const OrderSchema = z.object({
   id: z.uuid(),
   customerId: idRef(CustomerSchema),
-  productId: idRef(ProductSchema),
+  productIds: z.array(idRef(ProductRefSchema)),
   quantity: z.number().positive(),
   orderDate: z.date(),
   status: z.enum(['pending', 'shipped', 'delivered']),
 }).describe('Order');
 \`\`\`
 
-**Note:** The \`idRef()\` function creates string fields that reference other entities by ID. This allows you to show relationships without embedding the full entity structure. The library automatically generates placeholder entities and relationships for referenced entities.
+**Note:** The \`idRef()\` function creates string fields that reference other entities by ID. This allows you to show relationships without embedding the full entity structure. The library automatically generates placeholder entities and relationships for referenced entities. Use \`.describe()\` on your schemas to specify entity names.
 
 ## Usage
 
