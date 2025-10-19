@@ -711,11 +711,8 @@ function generateERDiagram(
           // Single ID reference - use "many-to-one" relationship
           relationshipType = field.isOptional ? '}o--o{' : '}o--||';
         }
-        const target = findEntityByNameAndBrand(
-          entities,
-          field.referencedEntity,
-        );
-        const targetName = target?.name ?? field.referencedEntity;
+        const targetName = entities.find(e => e.name === field.referencedEntity)?.name
+          ?? field.referencedEntity;
         lines.push(
           `    ${entity.name} ${relationshipType} ${targetName} : "${field.name}"`,
         );
@@ -748,24 +745,6 @@ function generateERDiagram(
   }
 
   return lines.join('\n');
-}
-
-/**
- * Finds an entity by its name in the list of schema entities.
- *
- * This function is used to find the full entity definition when an ID reference
- * is encountered in a field's type. It's primarily for placeholder entities
- * that represent ID references that are not directly defined in the current schema.
- *
- * @param entities - The list of parsed schema entities.
- * @param name - The name of the entity to find.
- * @returns The entity definition if found, otherwise undefined.
- */
-function findEntityByNameAndBrand(
-  entities: SchemaEntity[],
-  name: string,
-): SchemaEntity | undefined {
-  return entities.find(e => e.name === name);
 }
 
 /**
