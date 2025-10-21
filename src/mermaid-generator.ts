@@ -367,10 +367,18 @@ function getFieldType(schema: z.ZodTypeAny, fieldName: string, entityName: strin
     return 'string';
   case 'number':
     return 'number';
+  case 'bigint':
+    return 'bigint';
   case 'boolean':
     return 'boolean';
   case 'date':
     return 'date';
+  case 'symbol':
+    return 'symbol';
+  case 'null':
+    return 'null';
+  case 'undefined':
+    return 'undefined';
   case 'array': {
     const arraySchema = schema as z.ZodArray<any>;
     const arrayType = getFieldType(arraySchema.element, fieldName, entityName);
@@ -405,6 +413,36 @@ function getFieldType(schema: z.ZodTypeAny, fieldName: string, entityName: strin
     const keyType = getFieldType(recordDef.keyType, fieldName, entityName);
     const valueType = getFieldType(recordDef.valueType, fieldName, entityName);
     return `Record<${keyType}, ${valueType}>`;
+  }
+  case 'map': {
+    const mapDef = schema.def as any;
+    const keyType = getFieldType(mapDef.keyType, fieldName, entityName);
+    const valueType = getFieldType(mapDef.valueType, fieldName, entityName);
+    return `Map<${keyType}, ${valueType}>`;
+  }
+  case 'set': {
+    const setDef = schema.def as any;
+    const valueType = getFieldType(setDef.valueType, fieldName, entityName);
+    return `Set<${valueType}>`;
+  }
+  case 'promise': {
+    const promiseDef = schema.def as any;
+    const inner: z.ZodTypeAny | undefined =
+      promiseDef.innerType || promiseDef.type || promiseDef.itemType || promiseDef.schema;
+    const innerType = inner && typeof inner === 'object' && 'def' in inner
+      ? getFieldType(inner as z.ZodTypeAny, fieldName, entityName)
+      : 'unknown';
+    return `Promise<${innerType}>`;
+  }
+  case 'tuple': {
+    const tupleDef = schema.def as any;
+    const items: z.ZodTypeAny[] = (tupleDef.items as z.ZodTypeAny[]) || [];
+    const itemTypes = items.map(item => getFieldType(item, fieldName, entityName));
+    if (tupleDef.rest) {
+      const restType = getFieldType(tupleDef.rest as z.ZodTypeAny, fieldName, entityName);
+      itemTypes.push(`...${restType}[]`);
+    }
+    return `[${itemTypes.join(', ')}]`;
   }
   case 'optional': {
     const optionalSchema = schema as z.ZodOptional<any>;
@@ -447,8 +485,19 @@ function getFieldType(schema: z.ZodTypeAny, fieldName: string, entityName: strin
       }
       return fieldName ? fieldName.charAt(0).toUpperCase() + fieldName.slice(1) : 'Union';
     }
-    // For regular unions, return a generic union type
-    return 'union';
+    // For regular (non-discriminated) unions, render joined option types
+    const optionTypes: string[] = (unionDef.options as z.ZodTypeAny[])
+      ?.map((opt: z.ZodTypeAny) => getFieldType(opt, fieldName, entityName))
+      ?? [];
+    return optionTypes.length ? optionTypes.join(' | ') : 'union';
+  }
+  case 'intersection': {
+    const intDef = schema.def as any;
+    const left = intDef.left as z.ZodTypeAny | undefined;
+    const right = intDef.right as z.ZodTypeAny | undefined;
+    const leftType = left ? getFieldType(left, fieldName, entityName) : 'unknown';
+    const rightType = right ? getFieldType(right, fieldName, entityName) : 'unknown';
+    return `${leftType} & ${rightType}`;
   }
   case 'pipe': {
     // Zod v4 preprocess, transform, refinement, and effects types are all ZodEffects with
@@ -610,6 +659,27 @@ function getFieldValidation(schema: z.ZodTypeAny, registry: $ZodRegistry<any>): 
     validations.push(`enum: ${enumValues.join(', ')}`);
   }
 
+  // Non-discriminated union of literals -> enum values
+  if (type === 'union' && !(schema.def as any).discriminator) {
+    const unionDef = schema.def as any;
+    const options: z.ZodTypeAny[] = (unionDef.options as z.ZodTypeAny[]) ?? [];
+    const literalValues: string[] = [];
+    let allLiterals = options.length > 0;
+    for (const opt of options) {
+      if (opt?.def?.type === 'literal') {
+        const litDef = opt.def as any;
+        const [value] = (litDef.values ?? []) as unknown[];
+        literalValues.push(String(value));
+      } else {
+        allLiterals = false;
+        break;
+      }
+    }
+    if (allLiterals && literalValues.length) {
+      validations.push(`enum: ${literalValues.join(', ')}`);
+    }
+  }
+
   // Check for literal validations
   if (type === 'literal') {
     const literalDef = schema.def as any;
@@ -654,13 +724,44 @@ function generateERDiagram(
       let fieldType = field.type;
       const validation = field.validation || [];
 
-      // Handle record types specially for ER diagrams
-      if (fieldType.startsWith('Record<') && fieldType.endsWith('>')) {
-        // Extract the generic parameters and use HTML entities
-        const genericParams = fieldType.slice(7, -1); // Remove 'Record<' and '>'
+      // Handle generic types (e.g., Record<K,V>, Map<K,V>, Set<T>, Promise<T>)
+      const genericMatch = fieldType.match(/^([A-Za-z]+)<(.+)>$/);
+      if (genericMatch && genericMatch[1] && genericMatch[2]) {
+        const baseName = genericMatch[1] as string;
+        const genericParams = genericMatch[2] as string;
         const escapedParams = genericParams.replace(/</g, '&lt;').replace(/>/g, '&gt;');
-        fieldType = 'Record';
+        fieldType = baseName;
         validation.unshift(`&lt;${escapedParams}&gt;`);
+      }
+
+      // Handle tuple types in ER diagrams by annotating and simplifying the base type
+      if (fieldType.startsWith('[') && fieldType.endsWith(']')) {
+        const escaped = fieldType
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/&/g, '&amp;');
+        validation.unshift(escaped);
+        fieldType = 'Tuple';
+      }
+
+      // Handle non-discriminated unions by annotating the union string
+      if (fieldType.includes(' | ')) {
+        const escaped = fieldType
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/&/g, '&amp;');
+        validation.unshift(escaped);
+        fieldType = 'union';
+      }
+
+      // Handle intersections similarly
+      if (fieldType.includes(' & ')) {
+        const escaped = fieldType
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/&/g, '&amp;');
+        validation.unshift(escaped);
+        fieldType = 'intersection';
       }
 
       const parts: string[] = [];
