@@ -659,6 +659,27 @@ function getFieldValidation(schema: z.ZodTypeAny, registry: $ZodRegistry<any>): 
     validations.push(`enum: ${enumValues.join(', ')}`);
   }
 
+  // Non-discriminated union of literals -> enum values
+  if (type === 'union' && !(schema.def as any).discriminator) {
+    const unionDef = schema.def as any;
+    const options: z.ZodTypeAny[] = (unionDef.options as z.ZodTypeAny[]) ?? [];
+    const literalValues: string[] = [];
+    let allLiterals = options.length > 0;
+    for (const opt of options) {
+      if (opt?.def?.type === 'literal') {
+        const litDef = opt.def as any;
+        const [value] = (litDef.values ?? []) as unknown[];
+        literalValues.push(String(value));
+      } else {
+        allLiterals = false;
+        break;
+      }
+    }
+    if (allLiterals && literalValues.length) {
+      validations.push(`enum: ${literalValues.join(', ')}`);
+    }
+  }
+
   // Check for literal validations
   if (type === 'literal') {
     const literalDef = schema.def as any;
@@ -711,6 +732,36 @@ function generateERDiagram(
         const escapedParams = genericParams.replace(/</g, '&lt;').replace(/>/g, '&gt;');
         fieldType = baseName;
         validation.unshift(`&lt;${escapedParams}&gt;`);
+      }
+
+      // Handle tuple types in ER diagrams by annotating and simplifying the base type
+      if (fieldType.startsWith('[') && fieldType.endsWith(']')) {
+        const escaped = fieldType
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/&/g, '&amp;');
+        validation.unshift(escaped);
+        fieldType = 'Tuple';
+      }
+
+      // Handle non-discriminated unions by annotating the union string
+      if (fieldType.includes(' | ')) {
+        const escaped = fieldType
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/&/g, '&amp;');
+        validation.unshift(escaped);
+        fieldType = 'union';
+      }
+
+      // Handle intersections similarly
+      if (fieldType.includes(' & ')) {
+        const escaped = fieldType
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/&/g, '&amp;');
+        validation.unshift(escaped);
+        fieldType = 'intersection';
       }
 
       const parts: string[] = [];
