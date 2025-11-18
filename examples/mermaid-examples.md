@@ -525,7 +525,11 @@ const OrderSchema = z.object({
 }).describe('Order');
 ```
 
-**Note:** The `idRef()` function creates string fields that reference other entities by ID. This allows you to show relationships without embedding the full entity structure. The library automatically generates placeholder entities and relationships for referenced entities. Use `.describe()` on your schemas to specify entity names.
+**Note:** The `idRef()` function creates string fields that reference other 
+entities by ID. This allows you to show relationships without embedding the 
+full entity structure. The library automatically generates placeholder entities 
+and relationships for referenced entities. Use `.describe()` or `.meta({title})` 
+on your schemas to specify entity names.
 
 ## Usage
 
@@ -547,4 +551,6 @@ const diagram = generateMermaidDiagram(mySchema, {
 });
 ```
 
-**Note:** The library automatically uses the schema description (set with `.describe()`) as the entity name. If no description is provided, it will use the `entityName` option or default to 'Schema'.
+**Note:** The library automatically uses the schema title (set with `.meta({title})` 
+or description (set with `.describe()`) as the entity name. If no title or description 
+is provided, it will use the `entityName` option or default to 'Schema'.

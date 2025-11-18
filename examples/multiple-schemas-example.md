@@ -175,9 +175,9 @@ const diagram = generateMermaidDiagram([], { diagramType: 'er' });
 // Returns: "erDiagram"
 ```
 
-## Best Practices
+## Suggested usage
 
-1. **Use Descriptive Names**: Always use `.describe()` on your schemas to provide meaningful entity names
+1. **Use Descriptive Names**: Use `.describe()` or `.meta({title})` on your schemas to provide meaningful entity names
 2. **Group Related Schemas**: Pass schemas that are related or part of the same domain together
 3. **Consider Diagram Size**: Very large diagrams with many entities may become hard to read
 4. **Use ID References**: Use `idRef()` to create relationships between schemas without embedding full structures 
