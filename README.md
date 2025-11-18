@@ -350,7 +350,7 @@ classDiagram
     ProductEventPayload <|-- ProductEventPayload_updateProduct : updateProduct
 ```
 
-**Note:** Use `.describe()` on your discriminated union and its members to provide meaningful entity names in the diagrams. The library automatically creates separate entities for each union member using their descriptions and shows the relationships between them with the discriminator field values as edge labels.
+**Note:** Use `.describe()` or `.meta({title})` on your discriminated union and its members to provide meaningful entity names in the diagrams. The library automatically creates separate entities for each union member using their descriptions and shows the relationships between them with the discriminator field values as edge labels.
 
 ### ID References
 
