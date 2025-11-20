@@ -345,6 +345,76 @@ flowchart TD
     ProductEventPayload -.-> UpdateProductEvent
 ```
 
+      ## Additional Types Example
+
+      ### Entity-Relationship Diagram
+      ```mermaid
+      erDiagram
+    AdditionalTypes {
+        bigint big
+        symbol sym
+        null nul
+        undefined und
+        Tuple tup "[string, number, boolean]"
+        Map map "&lt;string, number&gt;"
+        Set set "&lt;string&gt;"
+        Promise prom "&lt;number&gt;"
+        Record rec "&lt;string, number&gt;"
+        intersection inter "string &amp; number"
+        union union "string | number"
+        string key "literal: foo"
+    }
+      ```
+
+      ### Class Diagram
+      ```mermaid
+      classDiagram
+    class AdditionalTypes {
+        +big: bigint
+        +sym: symbol
+        +nul: null
+        +und: undefined
+        +tup: [string, number, boolean]
+        +map: Map<string, number>
+        +set: Set<string>
+        +prom: Promise<number>
+        +rec: Record<string, number>
+        +inter: string & number
+        +union: string | number
+        +key: string
+    }
+      ```
+
+      ### Flowchart Diagram
+      ```mermaid
+      flowchart TD
+    AdditionalTypes["AdditionalTypes"]
+    AdditionalTypes_big["big: bigint"]
+    AdditionalTypes --> AdditionalTypes_big["big: bigint"]
+    AdditionalTypes_sym["sym: symbol"]
+    AdditionalTypes --> AdditionalTypes_sym["sym: symbol"]
+    AdditionalTypes_nul["nul: null"]
+    AdditionalTypes --> AdditionalTypes_nul["nul: null"]
+    AdditionalTypes_und["und: undefined"]
+    AdditionalTypes --> AdditionalTypes_und["und: undefined"]
+    AdditionalTypes_tup["tup: [string, number, boolean]"]
+    AdditionalTypes --> AdditionalTypes_tup["tup: [string, number, boolean]"]
+    AdditionalTypes_map["map: Map<string, number>"]
+    AdditionalTypes --> AdditionalTypes_map["map: Map<string, number>"]
+    AdditionalTypes_set["set: Set<string>"]
+    AdditionalTypes --> AdditionalTypes_set["set: Set<string>"]
+    AdditionalTypes_prom["prom: Promise<number>"]
+    AdditionalTypes --> AdditionalTypes_prom["prom: Promise<number>"]
+    AdditionalTypes_rec["rec: Record<string, number>"]
+    AdditionalTypes --> AdditionalTypes_rec["rec: Record<string, number>"]
+    AdditionalTypes_inter["inter: string & number"]
+    AdditionalTypes --> AdditionalTypes_inter["inter: string & number"]
+    AdditionalTypes_union["union: string | number"]
+    AdditionalTypes --> AdditionalTypes_union["union: string | number"]
+    AdditionalTypes_key["key: string"]
+    AdditionalTypes --> AdditionalTypes_key["key: string"]
+      ```
+
 ## ID Reference Schema Example
 
 ### Entity-Relationship Diagram
