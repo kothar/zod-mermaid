@@ -237,22 +237,22 @@ ${eventClassDiagram}
 ${eventFlowchartDiagram}
 \`\`\`
 
-      ## Additional Types Example
+## Additional Types Example
 
-      ### Entity-Relationship Diagram
-      \`\`\`mermaid
-      ${additionalER}
-      \`\`\`
+### Entity-Relationship Diagram
+\`\`\`mermaid
+${additionalER}
+\`\`\`
 
-      ### Class Diagram
-      \`\`\`mermaid
-      ${additionalClass}
-      \`\`\`
+### Class Diagram
+\`\`\`mermaid
+${additionalClass}
+\`\`\`
 
-      ### Flowchart Diagram
-      \`\`\`mermaid
-      ${additionalFlow}
-      \`\`\`
+### Flowchart Diagram
+\`\`\`mermaid
+${additionalFlow}
+\`\`\`
 
 ## ID Reference Schema Example
 
