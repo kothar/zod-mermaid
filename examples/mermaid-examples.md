@@ -345,11 +345,11 @@ flowchart TD
     ProductEventPayload -.-> UpdateProductEvent
 ```
 
-      ## Additional Types Example
+## Additional Types Example
 
-      ### Entity-Relationship Diagram
-      ```mermaid
-      erDiagram
+### Entity-Relationship Diagram
+```mermaid
+erDiagram
     AdditionalTypes {
         bigint big
         symbol sym
@@ -364,11 +364,11 @@ flowchart TD
         union union "string | number"
         string key "enum: foo, bar"
     }
-      ```
+```
 
-      ### Class Diagram
-      ```mermaid
-      classDiagram
+### Class Diagram
+```mermaid
+classDiagram
     class AdditionalTypes {
         +big: bigint
         +sym: symbol
@@ -383,11 +383,11 @@ flowchart TD
         +union: string | number
         +key: string
     }
-      ```
+```
 
-      ### Flowchart Diagram
-      ```mermaid
-      flowchart TD
+### Flowchart Diagram
+```mermaid
+flowchart TD
     AdditionalTypes["AdditionalTypes"]
     AdditionalTypes_big["big: bigint"]
     AdditionalTypes --> AdditionalTypes_big["big: bigint"]
@@ -413,7 +413,7 @@ flowchart TD
     AdditionalTypes --> AdditionalTypes_union["union: string | number"]
     AdditionalTypes_key["key: string"]
     AdditionalTypes --> AdditionalTypes_key["key: string"]
-      ```
+```
 
 ## ID Reference Schema Example
 
