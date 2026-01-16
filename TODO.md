@@ -42,9 +42,10 @@
 - [x] **Object types**: Nested object handling with entity generation
 - [x] **Enum types**: Handled with proper rendering
 - [x] **Literal types**: Type inference from literal values
-- [x] **Union types**: Discriminated unions fully supported; non-discriminated returns generic 'union'
+- [x] **Union types**: Discriminated unions fully supported; non-discriminated returns union string (e.g., `string | number`)
 - [x] **Lazy types**: Self-referential schemas resolved correctly
-- [ ] **Missing types**: `bigint`, `symbol`, `null`, `undefined`, `tuple`, `map`, `set`, `promise`, `intersection`, `keyof`
+- [x] **Additional types**: `bigint`, `symbol`, `null`, `undefined`, `tuple`, `map`, `set`, `promise`, `intersection` - fully supported
+- [ ] **Missing types**: `keyof` (not yet implemented)
 
 ### Validation extraction (map Zod v4 checks)
 - [x] **String validations**: `min`, `max`, `email`, `uuid`, `url` - implemented
@@ -52,7 +53,7 @@
 - [x] **Literal validations**: Emitted as `literal: <value>`
 - [x] **Enum validations**: Emitted as `enum: a, b, c`
 - [x] **ID reference validation**: Shows as `ref: EntityName` in diagrams
-- [ ] **Missing**: regex validation labels, number type variants (int, finite, nonnegative, negative, nonpositive), nullable indicator
+- [ ] **Missing**: regex validation labels, number type variants (int, finite, nonnegative, negative, nonpositive), nullable indicator in validation list
 
 ### Entities and relationships
 - [x] **Embedded objects**: Direct object fields generate composition-like relationships
@@ -72,7 +73,7 @@
 - [x] **Entity naming**: Priority chain - schema.description → field-derived names
 - [x] **Descriptions on objects**: Using descriptions in field type names
 - [ ] **Avoid collisions**: Minimal logic for multiple top-level schemas (not uniquified with suffixes)
-- [ ] **Description propagation**: Field descriptions not yet included in diagrams
+- [ ] **Description propagation**: Field descriptions exist in SchemaField type but are not extracted from schemas or displayed in diagrams
 
 ### Traversal, recursion, and deduplication
 - [x] **Lazy handling**: `try/catch` prevents infinite loops
@@ -156,12 +157,13 @@ function getStringValidations(str: z.ZodString): string[] {
 ## Test Coverage to Add (Jest)
 
 - [ ] Arrays of objects emit one-to-many edges in ERD and composition in class diagrams
-- [ ] Array of ID references → one-to-many edges; single ID → many-to-one
-- [ ] Discriminated unions: correct discriminator key, option entities exclude discriminator field, proper subtype edges
-- [ ] Validations render correctly for string (min/max/email/uuid/url/regex) and number types (min/max/int/positive)
-- [ ] Lazy self-references don't infinite-loop; entity naming remains stable
-- [ ] Additional types (map/set/tuple/intersection/bigint) render to readable strings
-- [ ] Optional vs nullable: cardinality reflects optional; `nullable` appears in validation list
+- [x] Array of ID references → one-to-many edges; single ID → many-to-one (implemented with `}o--o{` and `}o--||` cardinality)
+- [x] Discriminated unions: correct discriminator key, option entities exclude discriminator field, proper subtype edges (fully implemented)
+- [x] Validations render correctly for string (min/max/email/uuid/url) and number types (min/max/positive) - regex validation not yet extracted
+- [x] Lazy self-references don't infinite-loop; entity naming remains stable (handled with try/catch)
+- [x] Additional types (map/set/tuple/intersection/bigint/symbol/null/undefined/promise) render to readable strings (all implemented)
+- [x] Optional vs nullable: cardinality reflects optional (implemented with `||--o{` for optional relationships)
+- [ ] Optional vs nullable: `nullable` indicator not yet shown in validation list
 - [ ] Multiple top-level schemas don't collide in entity names
 
 
