@@ -362,4 +362,79 @@ describe('Mermaid Generator', () => {
       expect(diagram).toBe('erDiagram');
     });
   });
+
+  describe('when generating diagrams with discriminated unions', () => {
+    it('should use .describe() for naming union member entities', () => {
+      const ResultSchema = z.discriminatedUnion('status', [
+        z.object({
+          status: z.literal('success'),
+          data: z.string(),
+        }).describe('SuccessResult'),
+        z.object({
+          status: z.literal('error'),
+          errorMessage: z.string(),
+        }).describe('ErrorResult'),
+      ]).describe('Result');
+
+      const erDiagram = generateMermaidDiagram(ResultSchema, { diagramType: 'er' });
+      
+      // Should use the provided descriptions for entity names
+      expect(erDiagram).toContain('Result {');
+      expect(erDiagram).toContain('SuccessResult {');
+      expect(erDiagram).toContain('ErrorResult {');
+      expect(erDiagram).toContain('Result ||--|| SuccessResult : "success"');
+      expect(erDiagram).toContain('Result ||--|| ErrorResult : "error"');
+
+      const classDiagram = generateMermaidDiagram(ResultSchema, { diagramType: 'class' });
+      
+      // Should use the provided descriptions in class diagrams too
+      expect(classDiagram).toContain('class Result {');
+      expect(classDiagram).toContain('class SuccessResult {');
+      expect(classDiagram).toContain('class ErrorResult {');
+      expect(classDiagram).toContain('Result <|-- SuccessResult : success');
+      expect(classDiagram).toContain('Result <|-- ErrorResult : error');
+    });
+
+    it('should use .meta({title}) for naming union member entities', () => {
+      const ResultSchema = z.discriminatedUnion('type', [
+        z.object({
+          type: z.literal('ok'),
+          value: z.number(),
+        }).meta({ title: 'OkResponse' }),
+        z.object({
+          type: z.literal('err'),
+          error: z.string(),
+        }).meta({ title: 'ErrResponse' }),
+      ]).meta({ title: 'Response' });
+
+      const erDiagram = generateMermaidDiagram(ResultSchema, { diagramType: 'er' });
+      
+      // Should use the provided meta titles for entity names
+      expect(erDiagram).toContain('Response {');
+      expect(erDiagram).toContain('OkResponse {');
+      expect(erDiagram).toContain('ErrResponse {');
+      expect(erDiagram).toContain('Response ||--|| OkResponse : "ok"');
+      expect(erDiagram).toContain('Response ||--|| ErrResponse : "err"');
+    });
+
+    it('should fall back to generated names when no description or title is provided', () => {
+      const ResultSchema = z.discriminatedUnion('status', [
+        z.object({
+          status: z.literal('success'),
+          data: z.string(),
+        }),
+        z.object({
+          status: z.literal('error'),
+          errorMessage: z.string(),
+        }),
+      ]).describe('Result');
+
+      const erDiagram = generateMermaidDiagram(ResultSchema, { diagramType: 'er' });
+      
+      // Should fall back to generated names like Result_success and Result_error
+      expect(erDiagram).toContain('Result {');
+      expect(erDiagram).toContain('Result_success {');
+      expect(erDiagram).toContain('Result_error {');
+    });
+  });
 });

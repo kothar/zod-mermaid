@@ -4,11 +4,8 @@ This example demonstrates how to generate Mermaid diagrams from multiple Zod sch
 
 ## Basic Example
 
+<!-- SCHEMA: multiple-schemas START -->
 ```typescript
-import { z } from 'zod';
-import { generateMermaidDiagram, idRef } from 'zod-mermaid';
-
-// Define multiple schemas
 const UserSchema = z.object({
   id: z.uuid(),
   name: z.string(),
@@ -32,22 +29,19 @@ const OrderSchema = z.object({
   orderDate: z.date(),
   status: z.enum(['pending', 'shipped', 'delivered']),
 }).describe('Order');
-
-// Generate diagram from multiple schemas
-const diagram = generateMermaidDiagram([UserSchema, ProductSchema, OrderSchema], {
-  diagramType: 'er',
-});
 ```
+<!-- SCHEMA: multiple-schemas END -->
 
 ## Generated ER Diagram
 
+<!-- DIAGRAM: multiple-schemas-er START -->
 ```mermaid
 erDiagram
     User {
         string id "uuid"
         string name
         string email "email"
-        number age "min: 0, max: 120"
+        number age "positive, max: 120"
     }
     Product {
         string id "uuid"
@@ -67,15 +61,11 @@ erDiagram
     Order }o--|| User : "customerId"
     Order }o--|| Product : "productId"
 ```
+<!-- DIAGRAM: multiple-schemas-er END -->
 
 ## Class Diagram Example
 
-```typescript
-const classDiagram = generateMermaidDiagram([UserSchema, ProductSchema, OrderSchema], {
-  diagramType: 'class',
-});
-```
-
+<!-- DIAGRAM: multiple-schemas-class START -->
 ```mermaid
 classDiagram
     class User {
@@ -99,56 +89,59 @@ classDiagram
         +orderDate: date
         +status: string
     }
+    class User {
+    }
+    class Product {
+    }
     Order --> User : customerId (ref)
     Order --> Product : productId (ref)
 ```
+<!-- DIAGRAM: multiple-schemas-class END -->
 
 ## Flowchart Example
 
-```typescript
-const flowchartDiagram = generateMermaidDiagram([UserSchema, ProductSchema, OrderSchema], {
-  diagramType: 'flowchart',
-});
-```
-
+<!-- DIAGRAM: multiple-schemas-flowchart START -->
 ```mermaid
 flowchart TD
     User["User"]
     Product["Product"]
     Order["Order"]
+    User["User"]
+    Product["Product"]
     User_id["id: string"]
-    User --> User_id
+    User --> User_id["id: string"]
     User_name["name: string"]
-    User --> User_name
+    User --> User_name["name: string"]
     User_email["email: string"]
-    User --> User_email
+    User --> User_email["email: string"]
     User_age["age: number"]
-    User --> User_age
+    User --> User_age["age: number"]
     Product_id["id: string"]
-    Product --> Product_id
+    Product --> Product_id["id: string"]
     Product_name["name: string"]
-    Product --> Product_name
+    Product --> Product_name["name: string"]
     Product_price["price: number"]
-    Product --> Product_price
+    Product --> Product_price["price: number"]
     Product_category["category: string"]
-    Product --> Product_category
+    Product --> Product_category["category: string"]
     Product_inStock["inStock: boolean"]
-    Product --> Product_inStock
+    Product --> Product_inStock["inStock: boolean"]
     Order_id["id: string"]
-    Order --> Order_id
+    Order --> Order_id["id: string"]
     Order_customerId["customerId: string"]
-    Order --> Order_customerId
-    Order_customerId -.-> User
+    Order --> Order_customerId["customerId: string"]
+    Order_customerId["customerId: string"] -.-> User
     Order_productId["productId: string"]
-    Order --> Order_productId
-    Order_productId -.-> Product
+    Order --> Order_productId["productId: string"]
+    Order_productId["productId: string"] -.-> Product
     Order_quantity["quantity: number"]
-    Order --> Order_quantity
+    Order --> Order_quantity["quantity: number"]
     Order_orderDate["orderDate: date"]
-    Order --> Order_orderDate
+    Order --> Order_orderDate["orderDate: date"]
     Order_status["status: string"]
-    Order --> Order_status
+    Order --> Order_status["status: string"]
 ```
+<!-- DIAGRAM: multiple-schemas-flowchart END -->
 
 ## Benefits of Multiple Schemas
 
