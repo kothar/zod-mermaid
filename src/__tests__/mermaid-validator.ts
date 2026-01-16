@@ -33,12 +33,15 @@ export async function validateMermaidSyntax(diagramSource: string): Promise<void
  */
 export function extractMermaidDiagrams(markdown: string): string[] {
   const diagrams: string[] = [];
-  const mermaidBlockRegex = /```mermaid\n([\s\S]*?)\n```/g;
+  // Match ```mermaid followed by content, then closing ``` on its own line
+  // Use multiline flag and ensure we match the closing ``` that's not part of another code block
+  const mermaidBlockRegex = /```mermaid\s*\n([\s\S]*?)\n\s*```/g;
   let match;
 
   while ((match = mermaidBlockRegex.exec(markdown)) !== null) {
     if (match[1]) {
-      diagrams.push(match[1]);
+      // Trim leading/trailing whitespace from the diagram content
+      diagrams.push(match[1].trim());
     }
   }
 

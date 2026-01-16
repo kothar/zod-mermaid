@@ -362,7 +362,7 @@ flowchart TD
         Record rec "&lt;string, number&gt;"
         intersection inter "string &amp; number"
         union union "string | number"
-        string key "literal: foo"
+        string key "enum: foo, bar"
     }
       ```
 
