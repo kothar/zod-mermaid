@@ -15,63 +15,7 @@ import { readFileSync, writeFileSync } from 'fs';
 import { join } from 'path';
 import { z } from 'zod';
 import { generateMermaidDiagram } from '../src/mermaid-generator';
-import { idRef } from '../src/id-ref';
-
-/**
- * Extract schema code from README markers
- */
-function extractSchemaCode(content: string, marker: string): string | null {
-  const startMarker = `<!-- SCHEMA: ${marker} START -->`;
-  const endMarker = `<!-- SCHEMA: ${marker} END -->`;
-  
-  const startIndex = content.indexOf(startMarker);
-  if (startIndex === -1) return null;
-
-  const endIndex = content.indexOf(endMarker, startIndex);
-  if (endIndex === -1) return null;
-
-  const section = content.substring(startIndex + startMarker.length, endIndex);
-  
-  // Extract code from TypeScript code block
-  const tsMatch = section.match(/```typescript\n([\s\S]*?)\n```/);
-  return tsMatch ? tsMatch[1] : null;
-}
-
-/**
- * Execute schema code in a shared context
- */
-function executeSchemaCode(code: string, sharedContext: Record<string, any> = {}): Record<string, any> {
-  // Create a context with the necessary imports and shared schemas
-  const context: Record<string, any> = {
-    z,
-    idRef,
-    generateMermaidDiagram,
-    ...sharedContext,
-  };
-  
-  // Execute the code and capture defined variables
-  const variableNames = extractVariableNames(code);
-  const wrappedCode = `
-    ${code}
-    return { ${variableNames.join(', ')} };
-  `;
-  
-  try {
-    const fn = new Function(...Object.keys(context), wrappedCode);
-    return fn(...Object.values(context));
-  } catch (error) {
-    console.error(`Error executing schema code: ${error}`);
-    return {};
-  }
-}
-
-/**
- * Extract variable names from schema code (excluding 'diagram')
- */
-function extractVariableNames(code: string): string[] {
-  const matches = code.matchAll(/const\s+(\w+)\s*[:=]/g);
-  return Array.from(matches, m => m[1]).filter(name => name !== 'diagram');
-}
+import { extractSchemaCode, executeSchemaCode, replaceDiagramByMarker } from './schema-utils';
 
 // Read the current README to extract schemas
 const readmePath = join(process.cwd(), 'README.md');
@@ -229,63 +173,4 @@ if (successCount > 0) {
   console.log(`\n✓ All diagrams are already up-to-date`);
 } else {
   console.log(`\n⚠ Some diagrams could not be updated (${unchangedCount} unchanged, ${replacements.length - unchangedCount - successCount} errors)`);
-}
-/**
- * Helper function to replace a diagram section using HTML comment markers
- * @param content - The full README content
- * @param marker - The marker name (e.g., 'product-er' for <!-- DIAGRAM: product-er START/END -->)
- * @param diagram - The new diagram content to insert (just the mermaid code, without the ```mermaid wrapper)
- * @returns The updated content
- */
-function replaceDiagramByMarker(
-  content: string,
-  marker: string,
-  diagram: string,
-): string {
-  const startMarker = `<!-- DIAGRAM: ${marker} START -->`;
-  const endMarker = `<!-- DIAGRAM: ${marker} END -->`;
-  
-  const startIndex = content.indexOf(startMarker);
-  if (startIndex === -1) {
-    return content;
-  }
-
-  const endIndex = content.indexOf(endMarker, startIndex);
-  if (endIndex === -1) {
-    return content;
-  }
-
-  // Get content between markers
-  const sectionStart = startIndex + startMarker.length;
-  const oldSection = content.substring(sectionStart, endIndex);
-  
-  // Find the mermaid code block
-  const mermaidMarker = '```mermaid';
-  const mermaidStart = oldSection.indexOf(mermaidMarker);
-  if (mermaidStart === -1) {
-    return content;
-  }
-  
-  // Find where the actual code starts (after ```mermaid and the newline)
-  const codeStart = mermaidStart + mermaidMarker.length;
-  const firstNewline = oldSection.indexOf('\n', codeStart);
-  if (firstNewline === -1) {
-    return content;
-  }
-  
-  // Find the closing ```
-  const codeEnd = oldSection.indexOf('\n```', firstNewline);
-  if (codeEnd === -1) {
-    return content;
-  }
-  
-  // Preserve everything before the code and after the code
-  const prefix = oldSection.substring(0, firstNewline + 1); // Include the newline after ```mermaid
-  const suffix = oldSection.substring(codeEnd); // Include the \n``` and everything after
-  
-  // Build the new section
-  const newSection = prefix + diagram + suffix;
-  
-  // Reconstruct the full content
-  return content.substring(0, sectionStart) + newSection + content.substring(endIndex);
 }

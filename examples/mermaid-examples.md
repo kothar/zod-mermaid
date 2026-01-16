@@ -4,7 +4,29 @@ This document contains example Mermaid diagrams generated from Zod schemas using
 
 ## User Schema Examples
 
+<!-- SCHEMA: user START -->
+```typescript
+const UserSchema = z.object({
+  id: z.uuid(),
+  name: z.string().min(1).max(100),
+  email: z.email(),
+  age: z.number().min(0).max(120),
+  isActive: z.boolean(),
+  createdAt: z.date(),
+  profile: z.object({
+    bio: z.string().optional(),
+    avatar: z.url().optional(),
+    preferences: z.object({
+      theme: z.enum(['light', 'dark']).default('light'),
+      notifications: z.boolean().default(true),
+    }),
+  }),
+}).describe('User');
+```
+<!-- SCHEMA: user END -->
+
 ### Entity-Relationship Diagram
+<!-- DIAGRAM: user-er START -->
 ```mermaid
 erDiagram
     User {
@@ -28,8 +50,10 @@ erDiagram
     User ||--|| Profile : "profile"
     Profile ||--|| Preferences : "preferences"
 ```
+<!-- DIAGRAM: user-er END -->
 
 ### Class Diagram
+<!-- DIAGRAM: user-class START -->
 ```mermaid
 classDiagram
     class User {
@@ -53,8 +77,10 @@ classDiagram
     User *-- Profile : profile
     Profile *-- Preferences : preferences
 ```
+<!-- DIAGRAM: user-class END -->
 
 ### Flowchart Diagram
+<!-- DIAGRAM: user-flowchart START -->
 ```mermaid
 flowchart TD
     User["User"]
@@ -87,10 +113,26 @@ flowchart TD
     Preferences_notifications["notifications: boolean"]
     Preferences --> Preferences_notifications["notifications: boolean"]
 ```
+<!-- DIAGRAM: user-flowchart END -->
 
 ## Product Schema Example
 
+<!-- SCHEMA: product START -->
+```typescript
+const ProductSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  price: z.number().positive(),
+  category: z.enum(['electronics', 'clothing', 'books']),
+  inStock: z.boolean(),
+  tags: z.array(z.string()),
+  metadata: z.record(z.string(), z.unknown()),
+}).describe('Product');
+```
+<!-- SCHEMA: product END -->
+
 ### Entity-Relationship Diagram
+<!-- DIAGRAM: product-er START -->
 ```mermaid
 erDiagram
     Product {
@@ -103,10 +145,25 @@ erDiagram
         Record metadata "&lt;string, unknown&gt;"
     }
 ```
+<!-- DIAGRAM: product-er END -->
 
 ## Directory Schema Example (Self-Referential)
 
+<!-- SCHEMA: directory START -->
+```typescript
+const DirectorySchema: z.ZodType<any> = z.object({
+  name: z.string(),
+  path: z.string(),
+  isDirectory: z.boolean(),
+  size: z.number().optional(),
+  modifiedAt: z.date(),
+  children: z.array(z.lazy(() => DirectorySchema)).optional(),
+}).describe('Directory');
+```
+<!-- SCHEMA: directory END -->
+
 ### Entity-Relationship Diagram
+<!-- DIAGRAM: directory-er START -->
 ```mermaid
 erDiagram
     Directory {
@@ -119,8 +176,10 @@ erDiagram
     }
     Directory ||--o{ Directory : "children"
 ```
+<!-- DIAGRAM: directory-er END -->
 
 ### Class Diagram
+<!-- DIAGRAM: directory-class START -->
 ```mermaid
 classDiagram
     class Directory {
@@ -133,8 +192,10 @@ classDiagram
     }
     Directory *-- Directory : children
 ```
+<!-- DIAGRAM: directory-class END -->
 
 ### Flowchart Diagram
+<!-- DIAGRAM: directory-flowchart START -->
 ```mermaid
 flowchart TD
     Directory["Directory"]
@@ -152,16 +213,43 @@ flowchart TD
     Directory --> Directory_children["children: Directory[]"]
     Directory_children["children: Directory[]"] --> Directory
 ```
+<!-- DIAGRAM: directory-flowchart END -->
 
 ## API Response Schema Example (Discriminated Union)
 
+<!-- SCHEMA: api-response START -->
+```typescript
+const ApiResponseSchema = z.discriminatedUnion('status', [
+  z.object({
+    status: z.literal('success'),
+    data: z.object({
+      id: z.string(),
+      name: z.string(),
+      email: z.email(),
+    }),
+    timestamp: z.date(),
+  }).describe('Success'),
+  z.object({
+    status: z.literal('error'),
+    message: z.string(),
+    code: z.number(),
+    details: z.object({
+      field: z.string().optional(),
+      reason: z.string(),
+    }).optional(),
+  }).describe('Error'),
+]).describe('ApiResponse');
+```
+<!-- SCHEMA: api-response END -->
+
 ### Entity-Relationship Diagram
+<!-- DIAGRAM: api-response-er START -->
 ```mermaid
 erDiagram
     ApiResponse {
         string status "enum: success, error"
     }
-    ApiResponse_Success {
+    Success {
         Data data
         date timestamp
     }
@@ -170,23 +258,25 @@ erDiagram
         string name
         string email "email"
     }
-    ApiResponse_Error {
+    Error {
         string message
         number code
         Details details
     }
-    ApiResponse_Success ||--|| Data : "data"
-    ApiResponse ||--|| ApiResponse_Success : "success"
-    ApiResponse ||--|| ApiResponse_Error : "error"
+    Success ||--|| Data : "data"
+    ApiResponse ||--|| Success : "success"
+    ApiResponse ||--|| Error : "error"
 ```
+<!-- DIAGRAM: api-response-er END -->
 
 ### Class Diagram
+<!-- DIAGRAM: api-response-class START -->
 ```mermaid
 classDiagram
     class ApiResponse {
         +status: string
     }
-    class ApiResponse_Success {
+    class Success {
         +data: Data
         +timestamp: date
     }
@@ -195,49 +285,85 @@ classDiagram
         +name: string
         +email: string
     }
-    class ApiResponse_Error {
+    class Error {
         +message: string
         +code: number
         +details: Details
     }
-    ApiResponse_Success *-- Data : data
-    ApiResponse <|-- ApiResponse_Success : success
-    ApiResponse <|-- ApiResponse_Error : error
+    Success *-- Data : data
+    ApiResponse <|-- Success : success
+    ApiResponse <|-- Error : error
 ```
+<!-- DIAGRAM: api-response-class END -->
 
 ### Flowchart Diagram
+<!-- DIAGRAM: api-response-flowchart START -->
 ```mermaid
 flowchart TD
     ApiResponse["ApiResponse"]
-    ApiResponse_Success["ApiResponse_Success"]
+    Success["Success"]
     Data["Data"]
-    ApiResponse_Error["ApiResponse_Error"]
+    Error["Error"]
     ApiResponse_status["status: string"]
     ApiResponse --> ApiResponse_status["status: string"]
-    ApiResponse_Success_data["data: Data"]
-    ApiResponse_Success --> ApiResponse_Success_data["data: Data"]
-    ApiResponse_Success_data["data: Data"] --> Data
-    ApiResponse_Success_timestamp["timestamp: date"]
-    ApiResponse_Success --> ApiResponse_Success_timestamp["timestamp: date"]
+    Success_data["data: Data"]
+    Success --> Success_data["data: Data"]
+    Success_data["data: Data"] --> Data
+    Success_timestamp["timestamp: date"]
+    Success --> Success_timestamp["timestamp: date"]
     Data_id["id: string"]
     Data --> Data_id["id: string"]
     Data_name["name: string"]
     Data --> Data_name["name: string"]
     Data_email["email: string"]
     Data --> Data_email["email: string"]
-    ApiResponse_Error_message["message: string"]
-    ApiResponse_Error --> ApiResponse_Error_message["message: string"]
-    ApiResponse_Error_code["code: number"]
-    ApiResponse_Error --> ApiResponse_Error_code["code: number"]
-    ApiResponse_Error_details["details: Details"]
-    ApiResponse_Error --> ApiResponse_Error_details["details: Details"]
-    ApiResponse -.-> ApiResponse_Success
-    ApiResponse -.-> ApiResponse_Error
+    Error_message["message: string"]
+    Error --> Error_message["message: string"]
+    Error_code["code: number"]
+    Error --> Error_code["code: number"]
+    Error_details["details: Details"]
+    Error --> Error_details["details: Details"]
+    ApiResponse -.-> Success
+    ApiResponse -.-> Error
 ```
+<!-- DIAGRAM: api-response-flowchart END -->
 
 ## Event Schema Example
 
+<!-- SCHEMA: event START -->
+```typescript
+const ProductEventPayloadSchema = z.discriminatedUnion('eventType', [
+  z.object({
+    eventType: z.literal('addProduct'),
+    id: z.uuid(),
+    name: z.string(),
+    description: z.string(),
+    location: z.string(),
+  }).describe('AddProductEvent'),
+  z.object({
+    eventType: z.literal('removeProduct'),
+    id: z.uuid(),
+  }).describe('RemoveProductEvent'),
+  z.object({
+    eventType: z.literal('updateProduct'),
+    id: z.uuid(),
+    name: z.string(),
+    description: z.string(),
+    location: z.string(),
+  }).describe('UpdateProductEvent'),
+]).describe('ProductEventPayload');
+
+const EventSchema = z.object({
+  id: z.string(),
+  type: z.literal('com.example.event.product'),
+  date: z.date(),
+  data: ProductEventPayloadSchema,
+}).meta({ title: 'Event', description: 'Event entity via registry meta' });
+```
+<!-- SCHEMA: event END -->
+
 ### Entity-Relationship Diagram
+<!-- DIAGRAM: event-er START -->
 ```mermaid
 erDiagram
     Event {
@@ -269,8 +395,10 @@ erDiagram
     ProductEventPayload ||--|| RemoveProductEvent : "removeProduct"
     ProductEventPayload ||--|| UpdateProductEvent : "updateProduct"
 ```
+<!-- DIAGRAM: event-er END -->
 
 ### Class Diagram
+<!-- DIAGRAM: event-class START -->
 ```mermaid
 classDiagram
     class Event {
@@ -302,8 +430,10 @@ classDiagram
     ProductEventPayload <|-- RemoveProductEvent : removeProduct
     ProductEventPayload <|-- UpdateProductEvent : updateProduct
 ```
+<!-- DIAGRAM: event-class END -->
 
 ### Flowchart Diagram
+<!-- DIAGRAM: event-flowchart START -->
 ```mermaid
 flowchart TD
     Event["Event"]
@@ -344,10 +474,31 @@ flowchart TD
     ProductEventPayload -.-> RemoveProductEvent
     ProductEventPayload -.-> UpdateProductEvent
 ```
+<!-- DIAGRAM: event-flowchart END -->
 
 ## Additional Types Example
 
+<!-- SCHEMA: additional-types START -->
+```typescript
+const AdditionalTypesSchema = z.object({
+  big: z.bigint(),
+  sym: z.symbol(),
+  nul: z.null(),
+  und: z.undefined(),
+  tup: z.tuple([z.string(), z.number(), z.boolean()]),
+  map: z.map(z.string(), z.number()),
+  set: z.set(z.string()),
+  prom: z.promise(z.number()),
+  rec: z.record(z.string(), z.number()),
+  inter: z.string().and(z.number()),
+  union: z.union([z.string(), z.number()]),
+  key: z.keyof(z.object({ foo: z.string(), bar: z.number() })),
+}).describe('AdditionalTypes');
+```
+<!-- SCHEMA: additional-types END -->
+
 ### Entity-Relationship Diagram
+<!-- DIAGRAM: additional-types-er START -->
 ```mermaid
 erDiagram
     AdditionalTypes {
@@ -365,8 +516,10 @@ erDiagram
         string key "enum: foo, bar"
     }
 ```
+<!-- DIAGRAM: additional-types-er END -->
 
 ### Class Diagram
+<!-- DIAGRAM: additional-types-class START -->
 ```mermaid
 classDiagram
     class AdditionalTypes {
@@ -384,8 +537,10 @@ classDiagram
         +key: string
     }
 ```
+<!-- DIAGRAM: additional-types-class END -->
 
 ### Flowchart Diagram
+<!-- DIAGRAM: additional-types-flowchart START -->
 ```mermaid
 flowchart TD
     AdditionalTypes["AdditionalTypes"]
@@ -414,10 +569,33 @@ flowchart TD
     AdditionalTypes_key["key: string"]
     AdditionalTypes --> AdditionalTypes_key["key: string"]
 ```
+<!-- DIAGRAM: additional-types-flowchart END -->
 
 ## ID Reference Schema Example
 
+<!-- SCHEMA: id-ref START -->
+```typescript
+const CustomerSchema = z.object({
+  id: z.uuid(),
+}).describe('Customer');
+
+const ProductRefSchema = z.object({
+  id: z.uuid(),
+}).describe('Product');
+
+const OrderSchema = z.object({
+  id: z.uuid(),
+  customerId: idRef(CustomerSchema),
+  productIds: z.array(idRef(ProductRefSchema)),
+  quantity: z.number().positive(),
+  orderDate: z.date(),
+  status: z.enum(['pending', 'shipped', 'delivered']),
+}).describe('Order');
+```
+<!-- SCHEMA: id-ref END -->
+
 ### Entity-Relationship Diagram
+<!-- DIAGRAM: id-ref-er START -->
 ```mermaid
 erDiagram
     Order {
@@ -431,8 +609,10 @@ erDiagram
     Order }o--|| Customer : "customerId"
     Order }o--o{ Product : "productIds"
 ```
+<!-- DIAGRAM: id-ref-er END -->
 
 ### Class Diagram
+<!-- DIAGRAM: id-ref-class START -->
 ```mermaid
 classDiagram
     class Order {
@@ -450,8 +630,10 @@ classDiagram
     Order --> Customer : customerId (ref)
     Order --> Product : productIds (ref)
 ```
+<!-- DIAGRAM: id-ref-class END -->
 
 ### Flowchart Diagram
+<!-- DIAGRAM: id-ref-flowchart START -->
 ```mermaid
 flowchart TD
     Order["Order"]
@@ -472,134 +654,7 @@ flowchart TD
     Order_status["status: string"]
     Order --> Order_status["status: string"]
 ```
-
-## Schema Definitions
-
-### User Schema
-```typescript
-const UserSchema = z.object({
-  id: z.uuid(),
-  name: z.string().min(1).max(100),
-  email: z.email(),
-  age: z.number().min(0).max(120),
-  isActive: z.boolean(),
-  createdAt: z.date(),
-  profile: z.object({
-    bio: z.string().optional(),
-    avatar: z.url().optional(),
-    preferences: z.object({
-      theme: z.enum(['light', 'dark']).default('light'),
-      notifications: z.boolean().default(true),
-    }),
-  }),
-}).describe('User');
-```
-
-### Product Schema
-```typescript
-const ProductSchema = z.object({
-  id: z.string(),
-  name: z.string(),
-  price: z.number().positive(),
-  category: z.enum(['electronics', 'clothing', 'books']),
-  inStock: z.boolean(),
-  tags: z.array(z.string()),
-  metadata: z.record(z.string(), z.unknown()),
-}).describe('Product');
-```
-
-### Directory Schema
-```typescript
-const DirectorySchema = z.object({
-  name: z.string(),
-  path: z.string(),
-  isDirectory: z.boolean(),
-  size: z.number().optional(),
-  modifiedAt: z.date(),
-  children: z.array(z.lazy(() => DirectorySchema)).optional(),
-}).describe('Directory');
-```
-
-### API Response Schema (Discriminated Union)
-```typescript
-const ApiResponseSchema = z.discriminatedUnion('status', [
-  z.object({
-    status: z.literal('success'),
-    data: z.object({
-      id: z.string(),
-      name: z.string(),
-      email: z.email(),
-    }),
-    timestamp: z.date(),
-  }).describe('ApiResponse_Success'),
-  z.object({
-    status: z.literal('error'),
-    message: z.string(),
-    code: z.number(),
-    details: z.object({
-      field: z.string().optional(),
-      reason: z.string(),
-    }).optional(),
-  }).describe('ApiResponse_Error'),
-]).describe('ApiResponse');
-```
-
-### Event Schema
-```typescript
-const ProductEventPayloadSchema = z.discriminatedUnion('eventType', [
-  z.object({
-    eventType: z.literal('addProduct'),
-    id: z.uuid(),
-    name: z.string(),
-    description: z.string(),
-    location: z.string(),
-  }).describe('AddProductEvent'),
-  z.object({
-    eventType: z.literal('removeProduct'),
-    id: z.uuid(),
-  }).describe('RemoveProductEvent'),
-  z.object({
-    eventType: z.literal('updateProduct'),
-    id: z.uuid(),
-    name: z.string(),
-    description: z.string(),
-    location: z.string(),
-  }).describe('UpdateProductEvent'),
-]).describe('ProductEventPayload');
-
-const EventSchema = z.object({
-  id: z.string(),
-  type: z.literal('com.example.event.product'),
-  date: z.date(),
-  data: ProductEventPayloadSchema,
-  }).meta({title: 'Event'});
-```
-
-### ID Reference Schema
-```typescript
-const CustomerSchema = z.object({
-  id: z.uuid(),
-}).describe('Customer');
-
-const ProductRefSchema = z.object({
-  id: z.uuid(),
-}).describe('Product');
-
-const OrderSchema = z.object({
-  id: z.uuid(),
-  customerId: idRef(CustomerSchema),
-  productIds: z.array(idRef(ProductRefSchema)),
-  quantity: z.number().positive(),
-  orderDate: z.date(),
-  status: z.enum(['pending', 'shipped', 'delivered']),
-}).describe('Order');
-```
-
-**Note:** The `idRef()` function creates string fields that reference other 
-entities by ID. This allows you to show relationships without embedding the 
-full entity structure. The library automatically generates placeholder entities 
-and relationships for referenced entities. Use `.describe()` or `.meta({title})` 
-on your schemas to specify entity names.
+<!-- DIAGRAM: id-ref-flowchart END -->
 
 ## Usage
 

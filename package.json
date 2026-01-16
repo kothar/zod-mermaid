@@ -21,8 +21,9 @@
     "type-check": "tsc --noEmit",
     "prepare": "npm run build",
     "regenerate:readme": "tsx scripts/regenerate-readme.ts",
-    "regenerate:examples": "NODE_OPTIONS=--experimental-vm-modules jest mermaid-example.test.ts",
-    "regenerate:all": "npm run regenerate:readme && npm run regenerate:examples"
+    "regenerate:examples": "tsx scripts/regenerate-examples.ts",
+    "regenerate:multiple-schemas": "tsx scripts/regenerate-multiple-schemas.ts",
+    "regenerate:all": "npm run regenerate:readme && npm run regenerate:examples && npm run regenerate:multiple-schemas"
   },
   "keywords": [
     "typescript",
