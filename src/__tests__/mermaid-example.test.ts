@@ -96,6 +96,22 @@ describe('Mermaid Example Generation', () => {
       data: ProductEventPayloadSchema,
     }).meta({ title: 'Event', description: 'Event entity via registry meta' });
 
+    // Additional Zod types example
+    const AdditionalTypesSchema = z.object({
+      big: z.bigint(),
+      sym: z.symbol(),
+      nul: z.null(),
+      und: z.undefined(),
+      tup: z.tuple([z.string(), z.number(), z.boolean()]),
+      map: z.map(z.string(), z.number()),
+      set: z.set(z.string()),
+      prom: z.promise(z.number()),
+      rec: z.record(z.string(), z.number()),
+      inter: z.string().and(z.number()),
+      union: z.union([z.string(), z.number()]),
+      key: z.keyof(z.object({ foo: z.string(), bar: z.number() })),
+    }).describe('AdditionalTypes');
+
     // Generate different types of diagrams
     const erDiagram = generateMermaidDiagram(UserSchema, { diagramType: 'er' });
     const classDiagram = generateMermaidDiagram(UserSchema, { diagramType: 'class' });
@@ -114,6 +130,10 @@ describe('Mermaid Example Generation', () => {
     const eventERDiagram = generateMermaidDiagram(EventSchema, { diagramType: 'er' });
     const eventClassDiagram = generateMermaidDiagram(EventSchema, { diagramType: 'class' });
     const eventFlowchartDiagram = generateMermaidDiagram(EventSchema, { diagramType: 'flowchart' });
+
+    const additionalER = generateMermaidDiagram(AdditionalTypesSchema, { diagramType: 'er' });
+    const additionalClass = generateMermaidDiagram(AdditionalTypesSchema, { diagramType: 'class' });
+    const additionalFlow = generateMermaidDiagram(AdditionalTypesSchema, { diagramType: 'flowchart' });
 
     // ID Reference Example
     const CustomerSchema = z.object({
@@ -215,6 +235,23 @@ ${eventClassDiagram}
 ### Flowchart Diagram
 \`\`\`mermaid
 ${eventFlowchartDiagram}
+\`\`\`
+
+## Additional Types Example
+
+### Entity-Relationship Diagram
+\`\`\`mermaid
+${additionalER}
+\`\`\`
+
+### Class Diagram
+\`\`\`mermaid
+${additionalClass}
+\`\`\`
+
+### Flowchart Diagram
+\`\`\`mermaid
+${additionalFlow}
 \`\`\`
 
 ## ID Reference Schema Example
