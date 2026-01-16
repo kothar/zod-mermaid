@@ -106,7 +106,7 @@ function parseSchemaToEntities(
 
     const fields = Object.entries(shape).map(([key, value]) => {
       const fieldSchema = value as z.ZodTypeAny;
-      const fieldType = getFieldType(fieldSchema, key, entityName);
+      const fieldType = getFieldType(fieldSchema, key, entityName, registry);
       const isOptional = isFieldOptional(fieldSchema);
       const validation = getFieldValidation(fieldSchema, registry);
 
@@ -264,7 +264,7 @@ function parseSchemaToEntities(
         const discriminatorValue: string = String(rawValue ?? '');
 
         // Use the schema description if available, otherwise fall back to the generic naming
-        const optionEntityName = optionSchema.description
+        const optionEntityName = getEntityName(optionSchema, registry)
           || `${unionEntityName}_${discriminatorValue}`;
 
         // Create the option entity with all fields except the discriminator
@@ -272,7 +272,7 @@ function parseSchemaToEntities(
           .filter(([key]) => key !== discriminator) // Exclude discriminator field
           .map(([key, value]) => {
             const fieldSchema = value as z.ZodTypeAny;
-            const fieldType = getFieldType(fieldSchema, key, optionEntityName);
+            const fieldType = getFieldType(fieldSchema, key, optionEntityName, registry);
             const isOptional = isFieldOptional(fieldSchema);
             const validation = getFieldValidation(fieldSchema, registry);
 
@@ -351,15 +351,16 @@ function parseSchemaToEntities(
  * @param schema - The Zod schema for the field
  * @param fieldName - The name of the field (used for object/entity references)
  * @param entityName - The name of the parent entity (used for self-referential/lazy types)
+ * @param registry - The Zod metadata registry for extracting entity names
  * @returns The field type as a string (e.g., 'string', 'number[]', 'Entity', etc.)
  *
  * @example
- * getFieldType(z.string(), 'name', 'User') // 'string'
- * getFieldType(z.array(z.number()), 'scores', 'User') // 'number[]'
- * getFieldType(z.object({...}), 'profile', 'User') // 'Profile'
- * getFieldType(z.lazy(() => UserSchema), 'parent', 'User') // 'User'
+ * getFieldType(z.string(), 'name', 'User', registry) // 'string'
+ * getFieldType(z.array(z.number()), 'scores', 'User', registry) // 'number[]'
+ * getFieldType(z.object({...}), 'profile', 'User', registry) // 'Profile'
+ * getFieldType(z.lazy(() => UserSchema), 'parent', 'User', registry) // 'User'
  */
-function getFieldType(schema: z.ZodTypeAny, fieldName: string, entityName: string): string {
+function getFieldType(schema: z.ZodTypeAny, fieldName: string, entityName: string, registry: $ZodRegistry<any>): string {
   const { type } = schema.def;
 
   switch (type) {
@@ -381,15 +382,13 @@ function getFieldType(schema: z.ZodTypeAny, fieldName: string, entityName: strin
     return 'undefined';
   case 'array': {
     const arraySchema = schema as z.ZodArray<any>;
-    const arrayType = getFieldType(arraySchema.element, fieldName, entityName);
+    const arrayType = getFieldType(arraySchema.element, fieldName, entityName, registry);
     return `${arrayType}[]`;
   }
   case 'object':
     // For objects, use the schema description if available, otherwise use field name
-    if (schema.description) {
-      return schema.description;
-    }
-    return fieldName ? fieldName.charAt(0).toUpperCase() + fieldName.slice(1) : 'Entity';
+    return getEntityName(schema, registry, fieldName)
+      || (fieldName ? fieldName.charAt(0).toUpperCase() + fieldName.slice(1) : 'Entity');
   case 'enum':
     return 'string';
   case 'literal': {
@@ -410,19 +409,19 @@ function getFieldType(schema: z.ZodTypeAny, fieldName: string, entityName: strin
   }
   case 'record': {
     const recordDef = schema.def as any;
-    const keyType = getFieldType(recordDef.keyType, fieldName, entityName);
-    const valueType = getFieldType(recordDef.valueType, fieldName, entityName);
+    const keyType = getFieldType(recordDef.keyType, fieldName, entityName, registry);
+    const valueType = getFieldType(recordDef.valueType, fieldName, entityName, registry);
     return `Record<${keyType}, ${valueType}>`;
   }
   case 'map': {
     const mapDef = schema.def as any;
-    const keyType = getFieldType(mapDef.keyType, fieldName, entityName);
-    const valueType = getFieldType(mapDef.valueType, fieldName, entityName);
+    const keyType = getFieldType(mapDef.keyType, fieldName, entityName, registry);
+    const valueType = getFieldType(mapDef.valueType, fieldName, entityName, registry);
     return `Map<${keyType}, ${valueType}>`;
   }
   case 'set': {
     const setDef = schema.def as any;
-    const valueType = getFieldType(setDef.valueType, fieldName, entityName);
+    const valueType = getFieldType(setDef.valueType, fieldName, entityName, registry);
     return `Set<${valueType}>`;
   }
   case 'promise': {
@@ -430,31 +429,31 @@ function getFieldType(schema: z.ZodTypeAny, fieldName: string, entityName: strin
     const inner: z.ZodTypeAny | undefined =
       promiseDef.innerType || promiseDef.type || promiseDef.itemType || promiseDef.schema;
     const innerType = inner && typeof inner === 'object' && 'def' in inner
-      ? getFieldType(inner as z.ZodTypeAny, fieldName, entityName)
+      ? getFieldType(inner as z.ZodTypeAny, fieldName, entityName, registry)
       : 'unknown';
     return `Promise<${innerType}>`;
   }
   case 'tuple': {
     const tupleDef = schema.def as any;
     const items: z.ZodTypeAny[] = (tupleDef.items as z.ZodTypeAny[]) || [];
-    const itemTypes = items.map(item => getFieldType(item, fieldName, entityName));
+    const itemTypes = items.map(item => getFieldType(item, fieldName, entityName, registry));
     if (tupleDef.rest) {
-      const restType = getFieldType(tupleDef.rest as z.ZodTypeAny, fieldName, entityName);
+      const restType = getFieldType(tupleDef.rest as z.ZodTypeAny, fieldName, entityName, registry);
       itemTypes.push(`...${restType}[]`);
     }
     return `[${itemTypes.join(', ')}]`;
   }
   case 'optional': {
     const optionalSchema = schema as z.ZodOptional<any>;
-    return getFieldType(optionalSchema.unwrap(), fieldName, entityName);
+    return getFieldType(optionalSchema.unwrap(), fieldName, entityName, registry);
   }
   case 'nullable': {
     const nullableSchema = schema as z.ZodNullable<any>;
-    return getFieldType(nullableSchema.unwrap(), fieldName, entityName);
+    return getFieldType(nullableSchema.unwrap(), fieldName, entityName, registry);
   }
   case 'default': {
     const defaultSchema = schema as z.ZodDefault<any>;
-    return getFieldType(defaultSchema.unwrap(), fieldName, entityName);
+    return getFieldType(defaultSchema.unwrap(), fieldName, entityName, registry);
   }
   case 'lazy': {
     const lazySchema = schema as z.ZodLazy<any>;
@@ -467,7 +466,7 @@ function getFieldType(schema: z.ZodTypeAny, fieldName: string, entityName: strin
         // For self-referential types, return the entity name
         return entityName || 'Entity';
       }
-      return getFieldType(resolvedSchema, fieldName, entityName);
+      return getFieldType(resolvedSchema, fieldName, entityName, registry);
     } catch {
       // If we can't resolve the lazy schema, return a generic reference
       return 'Entity';
@@ -480,14 +479,12 @@ function getFieldType(schema: z.ZodTypeAny, fieldName: string, entityName: strin
       // For discriminated unions, return the base entity name
       // The actual entity name will be determined during parsing
       // We need to get the entity name from the schema description or field name
-      if (schema.description) {
-        return schema.description;
-      }
-      return fieldName ? fieldName.charAt(0).toUpperCase() + fieldName.slice(1) : 'Union';
+      return getEntityName(schema, registry, fieldName)
+        || (fieldName ? fieldName.charAt(0).toUpperCase() + fieldName.slice(1) : 'Union');
     }
     // For regular (non-discriminated) unions, render joined option types
     const optionTypes: string[] = (unionDef.options as z.ZodTypeAny[])
-      ?.map((opt: z.ZodTypeAny) => getFieldType(opt, fieldName, entityName))
+      ?.map((opt: z.ZodTypeAny) => getFieldType(opt, fieldName, entityName, registry))
       ?? [];
     return optionTypes.length ? optionTypes.join(' | ') : 'union';
   }
@@ -495,8 +492,8 @@ function getFieldType(schema: z.ZodTypeAny, fieldName: string, entityName: strin
     const intDef = schema.def as any;
     const left = intDef.left as z.ZodTypeAny | undefined;
     const right = intDef.right as z.ZodTypeAny | undefined;
-    const leftType = left ? getFieldType(left, fieldName, entityName) : 'unknown';
-    const rightType = right ? getFieldType(right, fieldName, entityName) : 'unknown';
+    const leftType = left ? getFieldType(left, fieldName, entityName, registry) : 'unknown';
+    const rightType = right ? getFieldType(right, fieldName, entityName, registry) : 'unknown';
     return `${leftType} & ${rightType}`;
   }
   case 'pipe': {
@@ -505,7 +502,7 @@ function getFieldType(schema: z.ZodTypeAny, fieldName: string, entityName: strin
     // The 'out' property of the definition contains the output schema
     const pipeDef = schema.def as any;
     if (pipeDef.out) {
-      return getFieldType(pipeDef.out, fieldName, entityName);
+      return getFieldType(pipeDef.out, fieldName, entityName, registry);
     }
     return 'unknown';
   }
