@@ -19,7 +19,10 @@
     "format": "prettier --write \"src/**/*.ts\"",
     "format:check": "prettier --check \"src/**/*.ts\"",
     "type-check": "tsc --noEmit",
-    "prepare": "npm run build"
+    "prepare": "npm run build",
+    "regenerate:readme": "tsx scripts/regenerate-readme.ts",
+    "regenerate:examples": "NODE_OPTIONS=--experimental-vm-modules jest mermaid-example.test.ts",
+    "regenerate:all": "npm run regenerate:readme && npm run regenerate:examples"
   },
   "keywords": [
     "typescript",
@@ -58,6 +61,7 @@
     "prettier": "^3.1.0",
     "rimraf": "^6.0.0",
     "ts-jest": "^29.4.0",
+    "tsx": "^4.21.0",
     "typescript": "^5.2.2"
   },
   "engines": {

@@ -102,6 +102,7 @@ This will generate a single diagram containing all entities and their relationsh
 
 Shows entities, their attributes, and relationships with validation constraints.
 
+<!-- SCHEMA: product START -->
 ```typescript
 const ProductSchema = z.object({
   id: z.string(),
@@ -109,25 +110,28 @@ const ProductSchema = z.object({
   price: z.number().positive(),
   category: z.enum(['electronics', 'clothing', 'books']),
   metadata: z.record(z.string(), z.unknown()),
-});
+}).describe('Product');
 
 const diagram = generateMermaidDiagram(ProductSchema, { 
   diagramType: 'er', 
   entityName: 'Product' 
 });
 ```
+<!-- SCHEMA: product END -->
 
+<!-- DIAGRAM: product-er START -->
 **Output:**
 ```mermaid
 erDiagram
     Product {
         string id
         string name
-        number price
+        number price "positive"
         string category "enum: electronics, clothing, books"
         Record metadata "&lt;string, unknown&gt;"
     }
 ```
+<!-- DIAGRAM: product-er END -->
 
 ### Class Diagrams
 
@@ -140,6 +144,7 @@ const diagram = generateMermaidDiagram(UserSchema, {
 });
 ```
 
+<!-- DIAGRAM: user-class START -->
 **Output:**
 ```mermaid
 classDiagram
@@ -154,8 +159,9 @@ classDiagram
         +bio: string
         +avatar: string
     }
-    User --> Profile : profile
+    User *-- Profile : profile
 ```
+<!-- DIAGRAM: user-class END -->
 
 ### Flowchart Diagrams
 
@@ -168,6 +174,7 @@ const diagram = generateMermaidDiagram(UserSchema, {
 });
 ```
 
+<!-- DIAGRAM: user-flowchart START -->
 **Output:**
 ```mermaid
 flowchart TD
@@ -175,10 +182,21 @@ flowchart TD
     Profile["Profile"]
     User_id["id: string"]
     User --> User_id["id: string"]
+    User_name["name: string"]
+    User --> User_name["name: string"]
+    User_email["email: string"]
+    User --> User_email["email: string"]
+    User_age["age: number"]
+    User --> User_age["age: number"]
     User_profile["profile: Profile"]
     User --> User_profile["profile: Profile"]
     User_profile["profile: Profile"] --> Profile
+    Profile_bio["bio: string"]
+    Profile --> Profile_bio["bio: string"]
+    Profile_avatar["avatar: string"]
+    Profile --> Profile_avatar["avatar: string"]
 ```
+<!-- DIAGRAM: user-flowchart END -->
 
 ## Advanced Features
 
@@ -186,6 +204,7 @@ flowchart TD
 
 Handle recursive data structures like directory listings:
 
+<!-- SCHEMA: directory START -->
 ```typescript
 const DirectorySchema = z.object({
   name: z.string(),
@@ -199,7 +218,9 @@ const diagram = generateMermaidDiagram(DirectorySchema, {
   entityName: 'Directory' 
 });
 ```
+<!-- SCHEMA: directory END -->
 
+<!-- DIAGRAM: directory-er START -->
 **Output:**
 ```mermaid
 erDiagram
@@ -211,11 +232,13 @@ erDiagram
     }
     Directory ||--o{ Directory : "children"
 ```
+<!-- DIAGRAM: directory-er END -->
 
 ### Nested Object Relationships
 
 Automatically creates separate entities for nested objects:
 
+<!-- SCHEMA: nested-user START -->
 ```typescript
 const UserSchema = z.object({
   id: z.uuid(),
@@ -229,7 +252,9 @@ const UserSchema = z.object({
   }),
 });
 ```
+<!-- SCHEMA: nested-user END -->
 
+<!-- DIAGRAM: nested-user-er START -->
 **Output:**
 ```mermaid
 erDiagram
@@ -249,11 +274,13 @@ erDiagram
     User ||--|| Profile : "profile"
     Profile ||--|| Preferences : "preferences"
 ```
+<!-- DIAGRAM: nested-user-er END -->
 
 ### Discriminated Unions
 
 Handle complex event systems and API responses with discriminated unions:
 
+<!-- SCHEMA: event START -->
 ```typescript
 const ProductEventPayloadSchema = z.discriminatedUnion('eventType', [
   z.object({
@@ -283,40 +310,44 @@ const EventSchema = z.object({
   data: ProductEventPayloadSchema,
 }).describe('Event');
 ```
+<!-- SCHEMA: event END -->
 
+<!-- DIAGRAM: event-er START -->
 **ER Diagram Output:**
 ```mermaid
 erDiagram
     Event {
         string id
-        string type
+        string type "literal: com.example.event.product"
         date date
         ProductEventPayload data
     }
     ProductEventPayload {
         string eventType "enum: addProduct, removeProduct, updateProduct"
     }
-    ProductEventPayload_addProduct {
-        string id
+    AddProductEvent {
+        string id "uuid"
         string name
         string description
         string location
     }
-    ProductEventPayload_removeProduct {
-        string id
+    RemoveProductEvent {
+        string id "uuid"
     }
-    ProductEventPayload_updateProduct {
-        string id
+    UpdateProductEvent {
+        string id "uuid"
         string name
         string description
         string location
     }
     Event ||--|| ProductEventPayload : "data"
-    ProductEventPayload ||--|| ProductEventPayload_addProduct : "addProduct"
-    ProductEventPayload ||--|| ProductEventPayload_removeProduct : "removeProduct"
-    ProductEventPayload ||--|| ProductEventPayload_updateProduct : "updateProduct"
+    ProductEventPayload ||--|| AddProductEvent : "addProduct"
+    ProductEventPayload ||--|| RemoveProductEvent : "removeProduct"
+    ProductEventPayload ||--|| UpdateProductEvent : "updateProduct"
 ```
+<!-- DIAGRAM: event-er END -->
 
+<!-- DIAGRAM: event-class START -->
 **Class Diagram Output:**
 ```mermaid
 classDiagram
@@ -329,26 +360,27 @@ classDiagram
     class ProductEventPayload {
         +eventType: string
     }
-    class ProductEventPayload_addProduct {
+    class AddProductEvent {
         +id: string
         +name: string
         +description: string
         +location: string
     }
-    class ProductEventPayload_removeProduct {
+    class RemoveProductEvent {
         +id: string
     }
-    class ProductEventPayload_updateProduct {
+    class UpdateProductEvent {
         +id: string
         +name: string
         +description: string
         +location: string
     }
-    Event --> ProductEventPayload : data
-    ProductEventPayload <|-- ProductEventPayload_addProduct : addProduct
-    ProductEventPayload <|-- ProductEventPayload_removeProduct : removeProduct
-    ProductEventPayload <|-- ProductEventPayload_updateProduct : updateProduct
+    Event *-- ProductEventPayload : data
+    ProductEventPayload <|-- AddProductEvent : addProduct
+    ProductEventPayload <|-- RemoveProductEvent : removeProduct
+    ProductEventPayload <|-- UpdateProductEvent : updateProduct
 ```
+<!-- DIAGRAM: event-class END -->
 
 **Note:** Use `.describe()` or `.meta({title})` on your discriminated union and its members to provide meaningful entity names in the diagrams. The library automatically creates separate entities for each union member using their descriptions and shows the relationships between them with the discriminator field values as edge labels.
 
@@ -356,6 +388,7 @@ classDiagram
 
 For cases where you want to reference other entities by ID without embedding their full structure, use the `idRef()` function. The function takes a Zod schema as an argument and extracts the ID field type and validation:
 
+<!-- SCHEMA: order START -->
 ```typescript
 const CustomerSchema = z.object({
   id: z.uuid(),
@@ -371,25 +404,25 @@ const OrderSchema = z.object({
   orderDate: z.date(),
 }).describe('Order');
 ```
+<!-- SCHEMA: order END -->
 
+<!-- DIAGRAM: order-er START -->
 **ER Diagram Output:**
 ```mermaid
 erDiagram
     Order {
         string id "uuid"
         string customerId "ref: Customer, uuid"
-        string[] productIds "ref: Product, uuid"
-        number quantity
+        string[] productIds "ref: Product"
+        number quantity "positive"
         date orderDate
-    }
-    Customer {
-    }
-    Product {
     }
     Order }o--|| Customer : "customerId"
     Order }o--o{ Product : "productIds"
 ```
+<!-- DIAGRAM: order-er END -->
 
+<!-- DIAGRAM: order-class START -->
 **Class Diagram Output:**
 ```mermaid
 classDiagram
@@ -407,6 +440,7 @@ classDiagram
     Order --> Customer : customerId (ref)
     Order --> Product : productIds (ref)
 ```
+<!-- DIAGRAM: order-class END -->
 
 This generates relationships to placeholder entities and shows the field types as `string` with the referenced entity in the validation column. The relationship style differentiates ID references from embedded relationships.
 
@@ -514,6 +548,19 @@ npm test
 - `npm run test` - Run tests
 - `npm run lint` - Run ESLint
 - `npm run format` - Format code with Prettier
+- `npm run regenerate:readme` - Regenerate diagrams in README.md
+- `npm run regenerate:examples` - Regenerate diagrams in examples/mermaid-examples.md
+- `npm run regenerate:all` - Regenerate all diagrams in README and examples
+
+### Regenerating Diagrams
+
+The diagrams in this README and in the examples folder are automatically generated from Zod schemas. If you make changes to the diagram generation logic, you can regenerate all diagrams by running:
+
+```bash
+npm run regenerate:all
+```
+
+This ensures that all documentation stays in sync with the actual output of the library
 
 ## License
 
