@@ -360,7 +360,12 @@ function parseSchemaToEntities(
  * getFieldType(z.object({...}), 'profile', 'User', registry) // 'Profile'
  * getFieldType(z.lazy(() => UserSchema), 'parent', 'User', registry) // 'User'
  */
-function getFieldType(schema: z.ZodTypeAny, fieldName: string, entityName: string, registry: $ZodRegistry<any>): string {
+function getFieldType(
+  schema: z.ZodTypeAny,
+  fieldName: string,
+  entityName: string,
+  registry: $ZodRegistry<any>,
+): string {
   const { type } = schema.def;
 
   switch (type) {
