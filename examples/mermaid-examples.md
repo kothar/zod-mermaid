@@ -33,7 +33,7 @@ erDiagram
         string id "uuid"
         string name "min: 1, max: 100"
         string email "email"
-        number age "positive, max: 120"
+        number age "min: 0, max: 120"
         boolean isActive
         date createdAt
         Profile profile
@@ -84,34 +84,34 @@ classDiagram
 ```mermaid
 flowchart TD
     User["User"]
-    Profile["Profile"]
-    Preferences["Preferences"]
     User_id["id: string"]
-    User --> User_id["id: string"]
+    User --> User_id
     User_name["name: string"]
-    User --> User_name["name: string"]
+    User --> User_name
     User_email["email: string"]
-    User --> User_email["email: string"]
+    User --> User_email
     User_age["age: number"]
-    User --> User_age["age: number"]
+    User --> User_age
     User_isActive["isActive: boolean"]
-    User --> User_isActive["isActive: boolean"]
+    User --> User_isActive
     User_createdAt["createdAt: date"]
-    User --> User_createdAt["createdAt: date"]
+    User --> User_createdAt
     User_profile["profile: Profile"]
-    User --> User_profile["profile: Profile"]
-    User_profile["profile: Profile"] --> Profile
+    User --> User_profile
+    User_profile --> Profile
+    Profile["Profile"]
     Profile_bio["bio: string"]
-    Profile --> Profile_bio["bio: string"]
+    Profile --> Profile_bio
     Profile_avatar["avatar: string"]
-    Profile --> Profile_avatar["avatar: string"]
+    Profile --> Profile_avatar
     Profile_preferences["preferences: Preferences"]
-    Profile --> Profile_preferences["preferences: Preferences"]
-    Profile_preferences["preferences: Preferences"] --> Preferences
+    Profile --> Profile_preferences
+    Profile_preferences --> Preferences
+    Preferences["Preferences"]
     Preferences_theme["theme: string"]
-    Preferences --> Preferences_theme["theme: string"]
+    Preferences --> Preferences_theme
     Preferences_notifications["notifications: boolean"]
-    Preferences --> Preferences_notifications["notifications: boolean"]
+    Preferences --> Preferences_notifications
 ```
 <!-- DIAGRAM: user-flowchart END -->
 
@@ -200,18 +200,18 @@ classDiagram
 flowchart TD
     Directory["Directory"]
     Directory_name["name: string"]
-    Directory --> Directory_name["name: string"]
+    Directory --> Directory_name
     Directory_path["path: string"]
-    Directory --> Directory_path["path: string"]
+    Directory --> Directory_path
     Directory_isDirectory["isDirectory: boolean"]
-    Directory --> Directory_isDirectory["isDirectory: boolean"]
+    Directory --> Directory_isDirectory
     Directory_size["size: number"]
-    Directory --> Directory_size["size: number"]
+    Directory --> Directory_size
     Directory_modifiedAt["modifiedAt: date"]
-    Directory --> Directory_modifiedAt["modifiedAt: date"]
+    Directory --> Directory_modifiedAt
     Directory_children["children: Directory[]"]
-    Directory --> Directory_children["children: Directory[]"]
-    Directory_children["children: Directory[]"] --> Directory
+    Directory --> Directory_children
+    Directory_children --> Directory
 ```
 <!-- DIAGRAM: directory-flowchart END -->
 
@@ -263,9 +263,14 @@ erDiagram
         number code
         Details details
     }
-    Success ||--|| Data : "data"
+    Details {
+        string field
+        string reason
+    }
     ApiResponse ||--|| Success : "success"
     ApiResponse ||--|| Error : "error"
+    Success ||--|| Data : "data"
+    Error ||--o| Details : "details"
 ```
 <!-- DIAGRAM: api-response-er END -->
 
@@ -290,9 +295,14 @@ classDiagram
         +code: number
         +details: Details
     }
-    Success *-- Data : data
+    class Details {
+        +field: string
+        +reason: string
+    }
     ApiResponse <|-- Success : success
     ApiResponse <|-- Error : error
+    Success *-- Data : data
+    Error *-- Details : details
 ```
 <!-- DIAGRAM: api-response-class END -->
 
@@ -301,28 +311,34 @@ classDiagram
 ```mermaid
 flowchart TD
     ApiResponse["ApiResponse"]
-    Success["Success"]
-    Data["Data"]
-    Error["Error"]
     ApiResponse_status["status: string"]
-    ApiResponse --> ApiResponse_status["status: string"]
+    ApiResponse --> ApiResponse_status
+    Success["Success"]
     Success_data["data: Data"]
-    Success --> Success_data["data: Data"]
-    Success_data["data: Data"] --> Data
+    Success --> Success_data
+    Success_data --> Data
     Success_timestamp["timestamp: date"]
-    Success --> Success_timestamp["timestamp: date"]
+    Success --> Success_timestamp
+    Data["Data"]
     Data_id["id: string"]
-    Data --> Data_id["id: string"]
+    Data --> Data_id
     Data_name["name: string"]
-    Data --> Data_name["name: string"]
+    Data --> Data_name
     Data_email["email: string"]
-    Data --> Data_email["email: string"]
+    Data --> Data_email
+    Error["Error"]
     Error_message["message: string"]
-    Error --> Error_message["message: string"]
+    Error --> Error_message
     Error_code["code: number"]
-    Error --> Error_code["code: number"]
+    Error --> Error_code
     Error_details["details: Details"]
-    Error --> Error_details["details: Details"]
+    Error --> Error_details
+    Error_details --> Details
+    Details["Details"]
+    Details_field["field: string"]
+    Details --> Details_field
+    Details_reason["reason: string"]
+    Details --> Details_reason
     ApiResponse -.-> Success
     ApiResponse -.-> Error
 ```
@@ -370,7 +386,7 @@ erDiagram
         string id
         string type "literal: com.example.event.product"
         date date
-        ProductEventPayload data
+        ProductEventPayload data "ProductEventPayload"
     }
     ProductEventPayload {
         string eventType "enum: addProduct, removeProduct, updateProduct"
@@ -437,39 +453,39 @@ classDiagram
 ```mermaid
 flowchart TD
     Event["Event"]
-    ProductEventPayload["ProductEventPayload"]
-    AddProductEvent["AddProductEvent"]
-    RemoveProductEvent["RemoveProductEvent"]
-    UpdateProductEvent["UpdateProductEvent"]
     Event_id["id: string"]
-    Event --> Event_id["id: string"]
+    Event --> Event_id
     Event_type["type: string"]
-    Event --> Event_type["type: string"]
+    Event --> Event_type
     Event_date["date: date"]
-    Event --> Event_date["date: date"]
-    Event_data["data: ProductEventPayload"]
-    Event --> Event_data["data: ProductEventPayload"]
-    Event_data["data: ProductEventPayload"] --> ProductEventPayload
+    Event --> Event_date
+    Event_data["data: ProductEventPayload — ProductEventPayload"]
+    Event --> Event_data
+    Event_data --> ProductEventPayload
+    ProductEventPayload["ProductEventPayload"]
     ProductEventPayload_eventType["eventType: string"]
-    ProductEventPayload --> ProductEventPayload_eventType["eventType: string"]
+    ProductEventPayload --> ProductEventPayload_eventType
+    AddProductEvent["AddProductEvent"]
     AddProductEvent_id["id: string"]
-    AddProductEvent --> AddProductEvent_id["id: string"]
+    AddProductEvent --> AddProductEvent_id
     AddProductEvent_name["name: string"]
-    AddProductEvent --> AddProductEvent_name["name: string"]
+    AddProductEvent --> AddProductEvent_name
     AddProductEvent_description["description: string"]
-    AddProductEvent --> AddProductEvent_description["description: string"]
+    AddProductEvent --> AddProductEvent_description
     AddProductEvent_location["location: string"]
-    AddProductEvent --> AddProductEvent_location["location: string"]
+    AddProductEvent --> AddProductEvent_location
+    RemoveProductEvent["RemoveProductEvent"]
     RemoveProductEvent_id["id: string"]
-    RemoveProductEvent --> RemoveProductEvent_id["id: string"]
+    RemoveProductEvent --> RemoveProductEvent_id
+    UpdateProductEvent["UpdateProductEvent"]
     UpdateProductEvent_id["id: string"]
-    UpdateProductEvent --> UpdateProductEvent_id["id: string"]
+    UpdateProductEvent --> UpdateProductEvent_id
     UpdateProductEvent_name["name: string"]
-    UpdateProductEvent --> UpdateProductEvent_name["name: string"]
+    UpdateProductEvent --> UpdateProductEvent_name
     UpdateProductEvent_description["description: string"]
-    UpdateProductEvent --> UpdateProductEvent_description["description: string"]
+    UpdateProductEvent --> UpdateProductEvent_description
     UpdateProductEvent_location["location: string"]
-    UpdateProductEvent --> UpdateProductEvent_location["location: string"]
+    UpdateProductEvent --> UpdateProductEvent_location
     ProductEventPayload -.-> AddProductEvent
     ProductEventPayload -.-> RemoveProductEvent
     ProductEventPayload -.-> UpdateProductEvent
@@ -528,11 +544,11 @@ classDiagram
         +nul: null
         +und: undefined
         +tup: [string, number, boolean]
-        +map: Map<string, number>
-        +set: Set<string>
-        +prom: Promise<number>
-        +rec: Record<string, number>
-        +inter: string & number
+        +map: Map&lt;string, number&gt;
+        +set: Set&lt;string&gt;
+        +prom: Promise&lt;number&gt;
+        +rec: Record&lt;string, number&gt;
+        +inter: string &amp; number
         +union: string | number
         +key: string
     }
@@ -545,29 +561,29 @@ classDiagram
 flowchart TD
     AdditionalTypes["AdditionalTypes"]
     AdditionalTypes_big["big: bigint"]
-    AdditionalTypes --> AdditionalTypes_big["big: bigint"]
+    AdditionalTypes --> AdditionalTypes_big
     AdditionalTypes_sym["sym: symbol"]
-    AdditionalTypes --> AdditionalTypes_sym["sym: symbol"]
+    AdditionalTypes --> AdditionalTypes_sym
     AdditionalTypes_nul["nul: null"]
-    AdditionalTypes --> AdditionalTypes_nul["nul: null"]
+    AdditionalTypes --> AdditionalTypes_nul
     AdditionalTypes_und["und: undefined"]
-    AdditionalTypes --> AdditionalTypes_und["und: undefined"]
+    AdditionalTypes --> AdditionalTypes_und
     AdditionalTypes_tup["tup: [string, number, boolean]"]
-    AdditionalTypes --> AdditionalTypes_tup["tup: [string, number, boolean]"]
-    AdditionalTypes_map["map: Map<string, number>"]
-    AdditionalTypes --> AdditionalTypes_map["map: Map<string, number>"]
-    AdditionalTypes_set["set: Set<string>"]
-    AdditionalTypes --> AdditionalTypes_set["set: Set<string>"]
-    AdditionalTypes_prom["prom: Promise<number>"]
-    AdditionalTypes --> AdditionalTypes_prom["prom: Promise<number>"]
-    AdditionalTypes_rec["rec: Record<string, number>"]
-    AdditionalTypes --> AdditionalTypes_rec["rec: Record<string, number>"]
-    AdditionalTypes_inter["inter: string & number"]
-    AdditionalTypes --> AdditionalTypes_inter["inter: string & number"]
+    AdditionalTypes --> AdditionalTypes_tup
+    AdditionalTypes_map["map: Map&lt;string, number&gt;"]
+    AdditionalTypes --> AdditionalTypes_map
+    AdditionalTypes_set["set: Set&lt;string&gt;"]
+    AdditionalTypes --> AdditionalTypes_set
+    AdditionalTypes_prom["prom: Promise&lt;number&gt;"]
+    AdditionalTypes --> AdditionalTypes_prom
+    AdditionalTypes_rec["rec: Record&lt;string, number&gt;"]
+    AdditionalTypes --> AdditionalTypes_rec
+    AdditionalTypes_inter["inter: string &amp; number"]
+    AdditionalTypes --> AdditionalTypes_inter
     AdditionalTypes_union["union: string | number"]
-    AdditionalTypes --> AdditionalTypes_union["union: string | number"]
+    AdditionalTypes --> AdditionalTypes_union
     AdditionalTypes_key["key: string"]
-    AdditionalTypes --> AdditionalTypes_key["key: string"]
+    AdditionalTypes --> AdditionalTypes_key
 ```
 <!-- DIAGRAM: additional-types-flowchart END -->
 
@@ -601,10 +617,14 @@ erDiagram
     Order {
         string id "uuid"
         string customerId "ref: Customer, uuid"
-        string[] productIds "ref: Product, uuid"
+        string[] productIds "ref: Product"
         number quantity "positive"
         date orderDate
         string status "enum: pending, shipped, delivered"
+    }
+    Customer {
+    }
+    Product {
     }
     Order }o--|| Customer : "customerId"
     Order }o--o{ Product : "productIds"
@@ -637,22 +657,22 @@ classDiagram
 ```mermaid
 flowchart TD
     Order["Order"]
+    Order_id["id: string"]
+    Order --> Order_id
+    Order_customerId["customerId: string"]
+    Order --> Order_customerId
+    Order_customerId -.-> Customer
+    Order_productIds["productIds: string[]"]
+    Order --> Order_productIds
+    Order_productIds -.-> Product
+    Order_quantity["quantity: number"]
+    Order --> Order_quantity
+    Order_orderDate["orderDate: date"]
+    Order --> Order_orderDate
+    Order_status["status: string"]
+    Order --> Order_status
     Customer["Customer"]
     Product["Product"]
-    Order_id["id: string"]
-    Order --> Order_id["id: string"]
-    Order_customerId["customerId: string"]
-    Order --> Order_customerId["customerId: string"]
-    Order_customerId["customerId: string"] -.-> Customer
-    Order_productIds["productIds: string[]"]
-    Order --> Order_productIds["productIds: string[]"]
-    Order_productIds["productIds: string[]"] -.-> Product
-    Order_quantity["quantity: number"]
-    Order --> Order_quantity["quantity: number"]
-    Order_orderDate["orderDate: date"]
-    Order --> Order_orderDate["orderDate: date"]
-    Order_status["status: string"]
-    Order --> Order_status["status: string"]
 ```
 <!-- DIAGRAM: id-ref-flowchart END -->
 

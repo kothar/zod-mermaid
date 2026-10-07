@@ -1,24 +1,25 @@
-import { z } from 'zod';
-import { $ZodRegistry } from 'zod/v4/core/registries.cjs';
+/** @module entity */
+import type { z } from 'zod';
 
 /**
  * Gets the entity name from a schema
  * @param schema - The Zod schema
- * @param options - The diagram options
+ * @param registry - The metadata registry
  * @param parentFieldName - The name of the parent field (for nested objects)
- * @returns The entity name
+ * @returns The original label; Mermaid escaping is applied by the renderer.
+ * @example getEntityName(z.object({}).describe('User profile'), z.globalRegistry);
  */
 export function getEntityName(
-  schema: z.ZodTypeAny,
-  registry: $ZodRegistry<any>,
+  schema: z.core.$ZodType,
+  registry: z.core.$ZodRegistry<z.core.GlobalMeta>,
   parentFieldName?: string,
 ): string | undefined {
   // Try to get name from schema metadata or use a default
   const meta = registry.get(schema);
   if (meta) {
-    if (meta['entityName']) return meta['entityName'] as string;
-    if (meta.title) return removeWhitespace(meta.title);
-    if (meta.description) return removeWhitespace(meta.description);
+    if (typeof meta['entityName'] === 'string' && meta['entityName']) return meta['entityName'];
+    if (meta.title) return meta.title;
+    if (meta.description) return meta.description;
   }
 
   // For nested objects, use the parent field name to create a descriptive name
@@ -27,8 +28,4 @@ export function getEntityName(
   }
 
   return undefined;
-}
-
-function removeWhitespace(str: string): string {
-  return str.replace(/\s/g, '-');
 }

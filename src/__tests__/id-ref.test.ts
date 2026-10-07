@@ -32,3 +32,10 @@ describe('idRef', () => {
     expect(meta?.['targetEntityName']).toBe('MyCustomer');
   });
 });
+
+describe('idRef invalid input', () => {
+  it('rejects non-object schemas and inherited property names', () => {
+    expect(() => idRef(z.string() as unknown as z.ZodObject)).toThrow('object schema');
+    expect(() => idRef(z.object({}), 'toString')).toThrow('not found');
+  });
+});
