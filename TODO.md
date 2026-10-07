@@ -18,11 +18,11 @@
 - File minimum/maximum size annotations (in bytes), including zero bounds.
 - Original class property names displayed in escaped class notes.
 - Nested discriminated unions retain intermediate unions and all leaf variants.
+- ID references resolve by schema identity, including identically labelled targets.
 
 ## Follow-up opportunities
 
 - Per-target cardinalities for mixed unions and nested collections.
-- Resolve ID references by schema identity, including identically labelled targets.
 - Add SVG/browser rendering checks alongside parser tests.
 - Benchmark very large schemas and deeply nested recursive collections.
 
