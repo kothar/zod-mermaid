@@ -294,6 +294,9 @@ function validations(schema: Schema): string[] {
       result.push(`enum: ${literals.flatMap(item => item.values).join(', ')}`);
     }
   }
+  if (def.type === 'template_literal') {
+    result.push(`pattern: ${(schema as z.core.$ZodTemplateLiteral)._zod.pattern}`);
+  }
   if ('format' in def && typeof def.format === 'string') result.push(def.format);
   for (const check of def.checks ?? []) {
     const rule = (check as z.core.$ZodChecks)._zod.def;
