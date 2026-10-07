@@ -3,6 +3,7 @@ import type { z } from 'zod';
 
 import { getEntityName } from './entity';
 import { SchemaParseError } from './errors';
+import { getIdReference } from './id-ref';
 import { allocateName } from './syntax';
 
 import type { MermaidOptions, SchemaEntity, SchemaField } from './mermaid-types';
@@ -11,6 +12,7 @@ type Schema = z.core.$ZodType;
 
 export interface ParsedField extends SchemaField {
   readonly targets: string[];
+  readonly referenceSchema?: Schema | undefined;
   readonly many: boolean;
   readonly isNullable: boolean;
 }
@@ -115,7 +117,8 @@ export function parseSchemas(
     const targets: string[] = [];
     const type = readType(schema, name, targets, new Set());
     const referenceChain = def.type === 'array' ? [...chain, ...unwrap(def.element)] : chain;
-    const target = metadata(referenceChain, 'targetEntityName');
+    const reference = referenceChain.map(getIdReference).find(Boolean);
+    const target = reference?.label ?? metadata(referenceChain, 'targetEntityName');
     const validation = chain.flatMap(item => validations(item));
     if (target) validation.unshift(`ref: ${target}`);
     if (chain.some(item => definition(item).type === 'nullable')) validation.push('nullable');
@@ -130,6 +133,7 @@ export function parseSchemas(
       many: ['array', 'set', 'record', 'map'].includes(def.type),
       isIdReference: Boolean(target),
       referencedEntity: target,
+      referenceSchema: reference?.schema,
     };
   }
 
@@ -270,9 +274,14 @@ export function parseSchemas(
     for (const member of item.fields) {
       if (!member.referencedEntity) continue;
       const label = member.referencedEntity;
-      let target = entities.find(candidate => candidate.label === label);
+      const identity = member.referenceSchema;
+      let target = identity
+        ? known.get(identity)
+        : entities.find(candidate => candidate.label === label);
       if (!target) {
-        target = { name: allocateName(label, names), label, fields: [] };
+        const targetLabel = (identity && getEntityName(identity, registry)) || label;
+        target = { name: allocateName(targetLabel, names), label: targetLabel, fields: [] };
+        if (identity) known.set(identity, target);
         entities.push(target);
       }
       member.referencedEntity = target.name;

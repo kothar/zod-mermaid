@@ -5,6 +5,25 @@ import type { z } from 'zod';
 import { getEntityName } from './entity';
 import { SchemaParseError } from './errors';
 
+interface IdReference {
+  readonly schema: z.core.$ZodType;
+  readonly label: string;
+}
+
+// A weak identity map keeps relationship identity independent of display metadata registries.
+const REFERENCES = new WeakMap<z.core.$ZodType, IdReference>();
+
+/** Read reference identity, including metadata inherited by Zod clones. */
+export function getIdReference(schema: z.core.$ZodType): IdReference | undefined {
+  let current: z.core.$ZodType | undefined = schema;
+  while (current) {
+    const reference = REFERENCES.get(current);
+    if (reference) return reference;
+    current = current._zod.parent;
+  }
+  return undefined;
+}
+
 /**
  * Creates a field that references another entity by ID, inferring the type from the referenced
  * schema's id field.
@@ -54,5 +73,6 @@ export function idRef<
   const resultSchema = idFieldSchema.clone().meta({
     targetEntityName,
   });
+  REFERENCES.set(resultSchema, { schema, label: targetEntityName });
   return resultSchema as T['shape'][K];
 }
