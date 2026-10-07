@@ -1,4 +1,4 @@
-import { $ZodRegistry } from 'zod/v4/core/registries.cjs';
+import type { z } from 'zod';
 
 /**
  * Supported Mermaid diagram types
@@ -37,7 +37,7 @@ export interface MermaidOptions {
    * Custom Zod metadata registry to use instead of the global one.
    * If omitted, the Zod global registry (if available) and schema-level metadata are used.
    */
-  metadataRegistry?: $ZodRegistry<any>;
+  metadataRegistry?: z.core.$ZodRegistry<z.core.GlobalMeta>;
 }
 
 /**
