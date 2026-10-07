@@ -298,6 +298,9 @@ function validations(schema: Schema): string[] {
   for (const check of def.checks ?? []) {
     const rule = (check as z.core.$ZodChecks)._zod.def;
     switch (rule.check) {
+      case 'mime_type':
+        result.push(`mime: ${rule.mime.join(', ')}`);
+        break;
       case 'min_length':
         result.push(`min: ${rule.minimum}`);
         break;
