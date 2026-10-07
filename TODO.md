@@ -2,6 +2,8 @@
 
 ## Completed
 
+- ID references resolve by schema identity, including identically labelled targets.
+
 - Safe Mermaid identifiers, collision handling, aliases, and annotation escaping.
 - Required Mermaid parser checks for generated diagrams and all documented examples.
 - Shared schema traversal with cycle detection and lazy-resolution caching.
@@ -21,7 +23,6 @@
 - Render file MIME-type constraints; file size bounds are already supported.
 - Support nested discriminated-union variants.
 - Per-target cardinalities for mixed unions and nested collections.
-- Resolve ID references by schema identity, including identically labelled targets.
 - Preserve original class property names through Mermaid-compatible display annotations.
 - Add SVG/browser rendering checks alongside parser tests.
 - Benchmark very large schemas and deeply nested recursive collections.
