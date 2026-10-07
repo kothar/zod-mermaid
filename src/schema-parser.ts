@@ -133,6 +133,33 @@ export function parseSchemas(
     };
   }
 
+  function discriminatorValues(
+    schema: Schema,
+    discriminator: string,
+    active = new Set<Schema>(),
+  ): unknown[] {
+    const chain = unwrap(schema);
+    const base = chain[chain.length - 1] as Schema;
+    if (active.has(base)) return [];
+    active.add(base);
+    const def = definition(base);
+    let values: unknown[] = [];
+    if (def.type === 'union') {
+      values = def.options.flatMap(option => discriminatorValues(option, discriminator, active));
+    } else if (def.type === 'object') {
+      const property = def.shape[discriminator];
+      if (property) {
+        const propertyChain = unwrap(property);
+        const leaf = propertyChain[propertyChain.length - 1] as Schema;
+        const propertyDef = definition(leaf);
+        if (propertyDef.type === 'literal') ({ values } = propertyDef);
+        if (propertyDef.type === 'enum') values = [...(leaf as z.core.$ZodEnum)._zod.values];
+      }
+    }
+    active.delete(base);
+    return [...new Set(values)];
+  }
+
   function entity(schema: Schema, fallback: string, omit?: string): ParsedEntity {
     const chain = unwrap(schema);
     const base = chain[chain.length - 1] as Schema;
@@ -160,16 +187,7 @@ export function parseSchemas(
       const subtypes: Array<{ name: string; discriminatorValue: string }> = [];
       const values: string[] = [];
       for (const option of def.options) {
-        const optionDef = definition(option);
-        if (optionDef.type !== 'object') continue;
-        const discriminatorSchema = optionDef.shape[discriminator];
-        const discDef = discriminatorSchema ? definition(discriminatorSchema) : undefined;
-        const literals =
-          discDef?.type === 'literal'
-            ? discDef.values
-            : discDef?.type === 'enum'
-              ? [...(discriminatorSchema as z.core.$ZodEnum)._zod.values]
-              : [];
+        const literals = discriminatorValues(option, discriminator);
         const value = literals.map(String).join(', ');
         values.push(...literals.map(String));
         const subtype = entity(option, `${label}_${value}`, discriminator);
