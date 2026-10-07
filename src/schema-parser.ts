@@ -205,6 +205,13 @@ export function parseSchemas(
     const read = (child: Schema) => readType(child, name, targets, active);
     let result: string;
     switch (def.type) {
+      case 'function': {
+        // Argument and return objects are types, not owned fields of the enclosing entity.
+        const input = readType(def.input, `${name}Args`, [], active);
+        const output = readType(def.output, `${name}Result`, [], active);
+        result = `Function<${input}, ${output}>`;
+        break;
+      }
       case 'array': {
         const element = read(def.element);
         result = / [|&] /.test(element) ? `(${element})[]` : `${element}[]`;
