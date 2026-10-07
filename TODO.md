@@ -17,10 +17,10 @@
 - Function argument and return signatures (`Function<Arguments, Return>`).
 - File minimum/maximum size annotations (in bytes), including zero bounds.
 - Original class property names displayed in escaped class notes.
+- Nested discriminated unions retain intermediate unions and all leaf variants.
 
 ## Follow-up opportunities
 
-- Support nested discriminated-union variants.
 - Per-target cardinalities for mixed unions and nested collections.
 - Resolve ID references by schema identity, including identically labelled targets.
 - Add SVG/browser rendering checks alongside parser tests.
