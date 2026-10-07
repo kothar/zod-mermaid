@@ -152,7 +152,7 @@ export function parseSchemas(
         const propertyChain = unwrap(property);
         const leaf = propertyChain[propertyChain.length - 1] as Schema;
         const propertyDef = definition(leaf);
-        if (propertyDef.type === 'literal') values = propertyDef.values;
+        if (propertyDef.type === 'literal') ({ values } = propertyDef);
         if (propertyDef.type === 'enum') values = [...(leaf as z.core.$ZodEnum)._zod.values];
       }
     }
