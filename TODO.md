@@ -16,13 +16,13 @@
 - Consistent formatting and lint configuration.
 - Function argument and return signatures (`Function<Arguments, Return>`).
 - File minimum/maximum size annotations (in bytes), including zero bounds.
+- Original class property names displayed in escaped class notes.
 
 ## Follow-up opportunities
 
 - Support nested discriminated-union variants.
 - Per-target cardinalities for mixed unions and nested collections.
 - Resolve ID references by schema identity, including identically labelled targets.
-- Preserve original class property names through Mermaid-compatible display annotations.
 - Add SVG/browser rendering checks alongside parser tests.
 - Benchmark very large schemas and deeply nested recursive collections.
 
