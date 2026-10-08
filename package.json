@@ -23,7 +23,8 @@
     "regenerate:readme": "tsx scripts/regenerate-readme.ts",
     "regenerate:examples": "tsx scripts/regenerate-examples.ts",
     "regenerate:multiple-schemas": "tsx scripts/regenerate-multiple-schemas.ts",
-    "regenerate:all": "npm run regenerate:readme && npm run regenerate:examples && npm run regenerate:multiple-schemas"
+    "regenerate:all": "npm run regenerate:readme && npm run regenerate:examples && npm run regenerate:multiple-schemas",
+    "test:render": "tsx scripts/rendering-checks.ts"
   },
   "keywords": [
     "typescript",

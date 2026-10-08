@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Zod Mermaid SVG rendering checks</title>
+    <style>
+      body {
+        font-family: sans-serif;
+        margin: 24px;
+      }
+      section {
+        border: 1px solid #ccc;
+        padding: 16px;
+        margin: 16px 0;
+        overflow: auto;
+      }
+      section svg {
+        max-width: none;
+      }
+      .passed {
+        color: #176b28;
+      }
+      .failed {
+        color: #b00020;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Zod Mermaid SVG rendering checks</h1>
+    <p id="status">Rendering…</p>
+    <main id="diagrams"></main>
+    <script type="module">
+      const results = [];
+      window.renderingResults = { complete: false, passed: false, results };
+      const status = document.querySelector('#status');
+      try {
+        const { default: mermaid } = await import('/mermaid/mermaid.esm.min.mjs');
+        mermaid.initialize({ startOnLoad: false, securityLevel: 'strict', theme: 'default' });
+        const fixtures = await (await fetch('/fixtures.json')).json();
+        for (const [index, fixture] of fixtures.entries()) {
+          const section = document.createElement('section');
+          const heading = document.createElement('h2');
+          heading.textContent = fixture.name;
+          section.append(heading);
+          document.querySelector('#diagrams').append(section);
+          try {
+            const { svg, bindFunctions } = await mermaid.render(
+              `render_check_${index}`,
+              fixture.source,
+            );
+            const container = document.createElement('div');
+            container.innerHTML = svg;
+            section.append(container);
+            bindFunctions?.(container);
+            await document.fonts.ready;
+            const element = container.querySelector('svg');
+            if (!element || container.querySelectorAll('svg').length !== 1) {
+              throw new Error('Expected exactly one SVG');
+            }
+            const box = element.getBBox();
+            const viewBox = element.viewBox.baseVal;
+            if (
+              ![box.x, box.y, box.width, box.height, viewBox.width, viewBox.height].every(
+                Number.isFinite,
+              ) ||
+              box.width <= 0 ||
+              box.height <= 0 ||
+              viewBox.width <= 0 ||
+              viewBox.height <= 0
+            ) {
+              throw new Error('SVG has empty or non-finite layout bounds');
+            }
+            if (element.querySelector('script') || /(?:NaN|Infinity)/.test(svg)) {
+              throw new Error('SVG contains executable content or invalid coordinates');
+            }
+            for (const label of fixture.labels) {
+              if (!element.textContent.includes(label))
+                throw new Error(`Missing visible label: ${label}`);
+            }
+            results.push({
+              name: fixture.name,
+              passed: true,
+              width: box.width,
+              height: box.height,
+            });
+            heading.className = 'passed';
+          } catch (error) {
+            results.push({ name: fixture.name, passed: false, error: String(error) });
+            heading.className = 'failed';
+            const message = document.createElement('pre');
+            message.textContent = String(error);
+            section.append(message);
+          }
+        }
+        const passed = results.every(result => result.passed);
+        const response = await fetch('/results', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(results),
+        });
+        window.renderingResults = { complete: true, passed: passed && response.ok, results };
+        status.textContent = `${results.filter(result => result.passed).length}/${results.length} checks passed`;
+        status.className = passed && response.ok ? 'passed' : 'failed';
+      } catch (error) {
+        window.renderingResults = { complete: true, passed: false, results, error: String(error) };
+        status.textContent = String(error);
+        status.className = 'failed';
+      }
+    </script>
+  </body>
+</html>
