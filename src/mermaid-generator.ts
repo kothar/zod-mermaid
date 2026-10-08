@@ -6,7 +6,7 @@ import { parseSchemas } from './schema-parser';
 import { allocateName, escapeClassRelationship, escapeLabel } from './syntax';
 
 import type { MermaidOptions } from './mermaid-types';
-import type { ParsedEntity, ParsedField } from './schema-parser';
+import type { ParsedEntity, ParsedRelationship } from './schema-parser';
 
 /**
  * Generate an ER, class, or flowchart diagram from Zod v4 schemas.
@@ -57,10 +57,10 @@ function erType(type: string): { type: string; annotation?: string } {
   return { type: base, annotation: type };
 }
 
-function cardinality(field: ParsedField): string {
-  if (field.many) return field.isIdReference ? '}o--o{' : '||--o{';
-  const target = field.isOptional || field.isNullable ? 'o|' : '||';
-  return `${field.isIdReference ? '}o' : '||'}--${target}`;
+function cardinality(relation: ParsedRelationship): string {
+  const target =
+    relation.max > 1 ? (relation.min > 0 ? '|{' : 'o{') : relation.min > 0 ? '||' : 'o|';
+  return `${relation.isIdReference ? '}o' : '||'}--${target}`;
 }
 
 function render(entities: ParsedEntity[], options: Required<MermaidOptions>): string {
@@ -98,10 +98,8 @@ function render(entities: ParsedEntity[], options: Required<MermaidOptions>): st
         const description = field.description ? ` — ${field.description}` : '';
         lines.push(`    ${node}["${escapeLabel(`${field.name}: ${field.type}${description}`)}"]`);
         lines.push(`    ${name} --> ${node}`);
-        const targets =
-          field.isIdReference && field.referencedEntity ? [field.referencedEntity] : field.targets;
-        for (const target of new Set(targets)) {
-          lines.push(`    ${node} ${field.isIdReference ? '-.->' : '-->'} ${target}`);
+        for (const relation of field.relationships) {
+          lines.push(`    ${node} ${relation.isIdReference ? '-.->' : '-->'} ${relation.target}`);
         }
       }
     }
@@ -110,17 +108,24 @@ function render(entities: ParsedEntity[], options: Required<MermaidOptions>): st
   for (const entity of entities) {
     if (diagramType !== 'flowchart') {
       for (const field of entity.fields) {
-        const targets =
-          field.isIdReference && field.referencedEntity ? [field.referencedEntity] : field.targets;
-        for (const target of new Set(targets)) {
+        for (const relation of field.relationships) {
+          const { target } = relation;
           if (diagramType === 'er') {
             lines.push(
-              `    ${entity.name} ${cardinality(field)} ${target} : "${escapeLabel(field.name)}"`,
+              `    ${entity.name} ${cardinality(relation)} ${target} : "${escapeLabel(field.name)}"`,
             );
           } else {
-            const arrow = field.isIdReference ? '-->' : '*--';
+            const arrow = relation.isIdReference ? '-->' : '*--';
+            const multiplicity =
+              relation.max > 1
+                ? relation.min > 0
+                  ? '1..*'
+                  : '0..*'
+                : relation.min > 0
+                  ? '1'
+                  : '0..1';
             lines.push(
-              `    ${entity.name} ${arrow} ${target} : ${escapeClassRelationship(field.name)}${field.isIdReference ? ' (ref)' : ''}`,
+              `    ${entity.name} ${arrow} "${multiplicity}" ${target} : ${escapeClassRelationship(field.name)}${relation.isIdReference ? ' (ref)' : ''}`,
             );
           }
         }

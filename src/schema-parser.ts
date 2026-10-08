@@ -10,7 +10,16 @@ import type { MermaidOptions, SchemaEntity, SchemaField } from './mermaid-types'
 
 type Schema = z.core.$ZodType;
 
+export interface ParsedRelationship {
+  target: string;
+  readonly referenceSchema?: Schema | undefined;
+  readonly isIdReference: boolean;
+  min: number;
+  max: number;
+}
+
 export interface ParsedField extends SchemaField {
+  readonly relationships: ParsedRelationship[];
   readonly targets: string[];
   readonly referenceSchema?: Schema | undefined;
   readonly many: boolean;
@@ -130,11 +139,122 @@ export function parseSchemas(
       validation: [...new Set(validation)],
       description: metadata(chain, 'description'),
       targets,
+      relationships: relationships(schema, name),
       many: ['array', 'set', 'record', 'map'].includes(def.type),
       isIdReference: Boolean(target),
       referencedEntity: target,
       referenceSchema: reference?.schema,
     };
+  }
+
+  function relationships(
+    schema: Schema,
+    name: string,
+    active = new Set<Schema>(),
+  ): ParsedRelationship[] {
+    if (active.has(schema)) return [];
+    const chain = unwrap(schema);
+    const base = chain[chain.length - 1] as Schema;
+    const def = definition(base);
+    const reference = chain.map(getIdReference).find(Boolean);
+    const label = reference?.label ?? metadata(chain, 'targetEntityName');
+    let result: ParsedRelationship[];
+    if (label) {
+      result = [
+        { target: label, referenceSchema: reference?.schema, isIdReference: true, min: 1, max: 1 },
+      ];
+    } else if (def.type === 'object' || (def.type === 'union' && 'discriminator' in def)) {
+      result = [{ target: entity(schema, name).name, isIdReference: false, min: 1, max: 1 }];
+    } else {
+      active.add(schema);
+      const read = (child: Schema) => relationships(child, name, active);
+      const key = (item: ParsedRelationship) =>
+        item.referenceSchema ?? `${item.isIdReference}:${item.target}`;
+      const combine = (groups: ParsedRelationship[][], mode: 'union' | 'sum' | 'intersection') => {
+        const merged = new Map<Schema | string, ParsedRelationship>();
+        for (const group of groups) {
+          for (const item of group) {
+            const id = key(item);
+            const previous = merged.get(id);
+            if (!previous) merged.set(id, { ...item });
+            else if (mode === 'sum') {
+              previous.min += item.min;
+              previous.max += item.max;
+            } else if (mode === 'intersection') {
+              previous.min = Math.max(previous.min, item.min);
+              previous.max = Math.min(previous.max, item.max);
+            } else {
+              previous.min = Math.min(previous.min, item.min);
+              previous.max = Math.max(previous.max, item.max);
+            }
+          }
+        }
+        if (mode === 'union') {
+          for (const [id, item] of merged) {
+            if (groups.some(group => !group.some(candidate => key(candidate) === id))) item.min = 0;
+          }
+        }
+        return [...merged.values()];
+      };
+      const scale = (items: ParsedRelationship[], min: number, max: number) =>
+        items.map(item => ({
+          ...item,
+          min: item.min * min,
+          max: item.max === 0 || max === 0 ? 0 : item.max * max,
+        }));
+      const bounds = () => {
+        let min = 0;
+        let max = Infinity;
+        for (const check of def.checks ?? []) {
+          const rule = (check as z.core.$ZodChecks)._zod.def;
+          if (rule.check === 'min_length' || rule.check === 'min_size')
+            min = Math.max(min, rule.minimum);
+          if (rule.check === 'max_length' || rule.check === 'max_size')
+            max = Math.min(max, rule.maximum);
+          if (rule.check === 'length_equals') min = max = rule.length;
+          if (rule.check === 'size_equals') min = max = rule.size;
+        }
+        return { min, max };
+      };
+      switch (def.type) {
+        case 'array':
+        case 'set': {
+          const { min, max } = bounds();
+          result = scale(read(def.type === 'array' ? def.element : def.valueType), min, max);
+          break;
+        }
+        case 'map': {
+          const { min, max } = bounds();
+          result = scale(combine([read(def.keyType), read(def.valueType)], 'sum'), min, max);
+          break;
+        }
+        case 'record':
+          result = scale(read(def.valueType), 0, Infinity);
+          break;
+        case 'tuple':
+          result = combine(
+            [...def.items.map(read), ...(def.rest ? [scale(read(def.rest), 0, Infinity)] : [])],
+            'sum',
+          );
+          break;
+        case 'union':
+          result = combine(def.options.map(read), 'union');
+          break;
+        case 'intersection':
+          result = combine([read(def.left), read(def.right)], 'intersection');
+          break;
+        case 'promise':
+          result = read(def.innerType);
+          break;
+        default:
+          result = [];
+      }
+      active.delete(schema);
+    }
+    if (optional(chain) || chain.some(item => definition(item).type === 'nullable')) {
+      result = result.map(item => ({ ...item, min: 0 }));
+    }
+    return result.filter(item => item.max > 0);
   }
 
   function entity(schema: Schema, fallback: string, omit?: string): ParsedEntity {
@@ -186,6 +306,7 @@ export function parseSchemas(
         isNullable: false,
         validation: [`enum: ${values.join(', ')}`],
         targets: [],
+        relationships: [],
         many: false,
       });
       result.unionRelationships = { baseEntity: result.name, subtypes };
@@ -272,19 +393,22 @@ export function parseSchemas(
   }
   for (const item of [...entities]) {
     for (const member of item.fields) {
-      if (!member.referencedEntity) continue;
-      const label = member.referencedEntity;
-      const identity = member.referenceSchema;
-      let target = identity
-        ? known.get(identity)
-        : entities.find(candidate => candidate.label === label);
-      if (!target) {
-        const targetLabel = (identity && getEntityName(identity, registry)) || label;
-        target = { name: allocateName(targetLabel, names), label: targetLabel, fields: [] };
-        if (identity) known.set(identity, target);
-        entities.push(target);
+      for (const relation of member.relationships) {
+        if (!relation.isIdReference) continue;
+        const label = relation.target;
+        const identity = relation.referenceSchema;
+        let target = identity
+          ? known.get(identity)
+          : entities.find(candidate => candidate.label === label);
+        if (!target) {
+          const targetLabel = (identity && getEntityName(identity, registry)) || label;
+          target = { name: allocateName(targetLabel, names), label: targetLabel, fields: [] };
+          if (identity) known.set(identity, target);
+          entities.push(target);
+        }
+        relation.target = target.name;
+        if (member.isIdReference) member.referencedEntity = target.name;
       }
-      member.referencedEntity = target.name;
     }
   }
   return entities;
