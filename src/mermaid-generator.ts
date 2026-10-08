@@ -94,7 +94,7 @@ function render(entities: ParsedEntity[], options: Required<MermaidOptions>): st
         lines.push(`        ${type.type} ${fieldName}${comment}`);
       } else if (diagramType === 'class') {
         if (fieldName !== field.name) {
-          originalNames.push(escapeLabel(`${fieldName}: name: ${JSON.stringify(field.name)}`));
+          originalNames.push(escapeLabel(`${fieldName}: ${JSON.stringify(field.name)}`));
         }
         lines.push(`        +${fieldName}: ${escapeLabel(field.type)}`);
       } else {
@@ -111,7 +111,9 @@ function render(entities: ParsedEntity[], options: Required<MermaidOptions>): st
     }
     if (diagramType !== 'flowchart') lines.push('    }');
     if (originalNames.length) {
-      lines.push(`    note for ${name} "${originalNames.join('<br/>')}"`);
+      lines.push(
+        `    note for ${name} "<b>Raw identifiers</b><br/>${originalNames.join('<br/>')}"`,
+      );
     }
   }
   for (const entity of entities) {

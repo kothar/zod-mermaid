@@ -21,9 +21,9 @@ describe('Original class property names', () => {
       diagramType: 'class',
       includeValidation: false,
     });
-    expect(diagram).toContain('note for Entity "');
-    expect(diagram).toContain('first_name_2: name: &quot;first-name&quot;');
-    expect(diagram).toContain('first_name_3: name: &quot;first_name&quot;');
+    expect(diagram).toContain('note for Entity "<b>Raw identifiers</b><br/>');
+    expect(diagram).toContain('first_name_2: &quot;first-name&quot;');
+    expect(diagram).toContain('first_name_3: &quot;first_name&quot;');
     for (const name of names) {
       expect(diagram).toContain(escapeLabel(JSON.stringify(name)));
     }
