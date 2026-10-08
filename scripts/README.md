@@ -130,3 +130,25 @@ If you add new diagram examples to the README:
 4. **Test**: Run `npm run regenerate:readme`
 
 The key advantage: You only write the schema code once (in the README), and the script extracts and executes it automatically!
+
+## Browser SVG rendering checks
+
+Run `npm run test:render`, then open `http://localhost:4173` in a real browser.
+The page automatically renders twelve generated diagrams using the locally installed
+Mermaid version: escaped labels, recursive schemas, discriminated unions, and ID
+references in ER, class, and flowchart formats. It checks visible entity labels,
+nonempty finite SVG/viewBox dimensions, invalid coordinates, and unexpected script
+nodes. Every result appears on the page and is reported as JSON to the terminal.
+No CDN or browser dependency is required.
+
+Set `RENDER_PORT=4174` to change the port. For one browser run, use
+`RENDER_ONCE=1 npm run test:render`: the server exits 0 when all checks pass or 1
+when a completed report contains failures. It listens on all interfaces so a remote
+collaborative browser can reach the development host; only the test page, generated
+fixtures, Mermaid's local `.mjs` files, and the result endpoint are served.
+
+Browser automation can open the page, wait for `window.renderingResults.complete`,
+and assert `window.renderingResults.passed === true`. Bootstrap errors also populate
+that object, so an automation runner can detect failed imports/network requests.
+The regular Jest suite still performs parser validation without a browser. These
+SVG checks are an additional browser-run check and are not wired into headless CI.
