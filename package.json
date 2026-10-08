@@ -24,7 +24,8 @@
     "regenerate:examples": "tsx scripts/regenerate-examples.ts",
     "regenerate:multiple-schemas": "tsx scripts/regenerate-multiple-schemas.ts",
     "regenerate:all": "npm run regenerate:readme && npm run regenerate:examples && npm run regenerate:multiple-schemas",
-    "benchmark": "node --expose-gc --import tsx benchmarks/large-schemas.ts"
+    "benchmark": "node --expose-gc --import tsx benchmarks/large-schemas.ts",
+    "test:render": "tsx scripts/rendering-checks.ts"
   },
   "keywords": [
     "typescript",
