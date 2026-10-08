@@ -16,7 +16,7 @@ describe('Schema identity ID references', () => {
         expect(diagram).toContain('Root }o--|| Target : "first"');
         expect(diagram).toContain('Root }o--|| Target_2 : "second"');
       } else if (diagramType === 'class') {
-        expect(diagram).toContain('Root --> Target_2 : second (ref)');
+        expect(diagram).toContain('Root --> "1" Target_2 : second (ref)');
       } else {
         expect(diagram).toContain('Root_second -.-> Target_2');
       }
