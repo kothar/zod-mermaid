@@ -41,7 +41,7 @@ erDiagram
         string id "uuid"
         string name
         string email "email"
-        number age "positive, max: 120"
+        number age "min: 0, max: 120"
     }
     Product {
         string id "uuid"
@@ -89,10 +89,6 @@ classDiagram
         +orderDate: date
         +status: string
     }
-    class User {
-    }
-    class Product {
-    }
     Order --> User : customerId (ref)
     Order --> Product : productId (ref)
 ```
@@ -104,42 +100,40 @@ classDiagram
 ```mermaid
 flowchart TD
     User["User"]
-    Product["Product"]
-    Order["Order"]
-    User["User"]
-    Product["Product"]
     User_id["id: string"]
-    User --> User_id["id: string"]
+    User --> User_id
     User_name["name: string"]
-    User --> User_name["name: string"]
+    User --> User_name
     User_email["email: string"]
-    User --> User_email["email: string"]
+    User --> User_email
     User_age["age: number"]
-    User --> User_age["age: number"]
+    User --> User_age
+    Product["Product"]
     Product_id["id: string"]
-    Product --> Product_id["id: string"]
+    Product --> Product_id
     Product_name["name: string"]
-    Product --> Product_name["name: string"]
+    Product --> Product_name
     Product_price["price: number"]
-    Product --> Product_price["price: number"]
+    Product --> Product_price
     Product_category["category: string"]
-    Product --> Product_category["category: string"]
+    Product --> Product_category
     Product_inStock["inStock: boolean"]
-    Product --> Product_inStock["inStock: boolean"]
+    Product --> Product_inStock
+    Order["Order"]
     Order_id["id: string"]
-    Order --> Order_id["id: string"]
+    Order --> Order_id
     Order_customerId["customerId: string"]
-    Order --> Order_customerId["customerId: string"]
-    Order_customerId["customerId: string"] -.-> User
+    Order --> Order_customerId
+    Order_customerId -.-> User
     Order_productId["productId: string"]
-    Order --> Order_productId["productId: string"]
-    Order_productId["productId: string"] -.-> Product
+    Order --> Order_productId
+    Order_productId -.-> Product
     Order_quantity["quantity: number"]
-    Order --> Order_quantity["quantity: number"]
+    Order --> Order_quantity
     Order_orderDate["orderDate: date"]
-    Order --> Order_orderDate["orderDate: date"]
+    Order --> Order_orderDate
     Order_status["status: string"]
-    Order --> Order_status["status: string"]
+    Order --> Order_status
 ```
 <!-- DIAGRAM: multiple-schemas-flowchart END -->
 

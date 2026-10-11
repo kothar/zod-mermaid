@@ -12,7 +12,8 @@ A TypeScript library that generates Mermaid diagrams from Zod schemas. Create be
 - **Self-Referential Types**: Handles recursive schemas with lazy types
 - **ID References**: Create relationships between entities using ID references with proper cardinality
 - **Validation Display**: Shows field constraints and validation rules
-- **Record Type Support**: Displays record types with generic parameters
+- **Zod v4 Types**: Collections, unions, intersections, wrappers, template literals, files, and primitives
+- **Safe Names**: Unique Mermaid identifiers with escaped labels and annotations
 - **Custom Entity Names**: Specify custom names for top-level entities
 - **Optional Field Handling**: Properly represents optional fields and relationships
 
@@ -179,22 +180,22 @@ const diagram = generateMermaidDiagram(UserSchema, {
 ```mermaid
 flowchart TD
     User["User"]
-    Profile["Profile"]
     User_id["id: string"]
-    User --> User_id["id: string"]
+    User --> User_id
     User_name["name: string"]
-    User --> User_name["name: string"]
+    User --> User_name
     User_email["email: string"]
-    User --> User_email["email: string"]
+    User --> User_email
     User_age["age: number"]
-    User --> User_age["age: number"]
+    User --> User_age
     User_profile["profile: Profile"]
-    User --> User_profile["profile: Profile"]
-    User_profile["profile: Profile"] --> Profile
+    User --> User_profile
+    User_profile --> Profile
+    Profile["Profile"]
     Profile_bio["bio: string"]
-    Profile --> Profile_bio["bio: string"]
+    Profile --> Profile_bio
     Profile_avatar["avatar: string"]
-    Profile --> Profile_avatar["avatar: string"]
+    Profile --> Profile_avatar
 ```
 <!-- DIAGRAM: user-flowchart END -->
 
@@ -320,7 +321,7 @@ erDiagram
         string id
         string type "literal: com.example.event.product"
         date date
-        ProductEventPayload data
+        ProductEventPayload data "ProductEventPayload"
     }
     ProductEventPayload {
         string eventType "enum: addProduct, removeProduct, updateProduct"
@@ -417,6 +418,10 @@ erDiagram
         number quantity "positive"
         date orderDate
     }
+    Customer {
+    }
+    Product {
+    }
     Order }o--|| Customer : "customerId"
     Order }o--o{ Product : "productIds"
 ```
@@ -442,12 +447,12 @@ classDiagram
 ```
 <!-- DIAGRAM: order-class END -->
 
-This generates relationships to placeholder entities and shows the field types as `string` with the referenced entity in the validation column. The relationship style differentiates ID references from embedded relationships.
+This generates relationships to placeholder entities and preserves the referenced ID field type (including numeric IDs) with the referenced entity in the validation column. The relationship style differentiates ID references from embedded relationships.
 
 **Relationship Cardinality:**
 - **Single ID references** (`idRef(Schema)`) use many-to-one relationships (`}o--||`)
 - **Array ID references** (`z.array(idRef(Schema))`) use many-to-many relationships (`}o--o{`)
-- **Optional ID references** use many-to-many relationships (`}o--o{`) to indicate optionality
+- **Optional or nullable single ID references** use many-to-zero-or-one relationships (`}o--o|`)
 
 **Function Signature:**
 ```typescript
@@ -492,9 +497,9 @@ classDiagram
 
 **Relationship Styles:**
 - **ER Diagrams**: 
-  - `||--||` or `||--o{`: Embedded relationships (full entity structure)
+  - `||--||`: Required embedded objects; `||--o|`: optional/nullable objects; `||--o{`: collections
   - `}o--||`: Single ID reference relationships (many-to-one)
-  - `}o--o{`: Array/optional ID reference relationships (many-to-many)
+  - `}o--o{`: Array ID references; `}o--o|`: optional/nullable single ID references
 - **Class Diagrams**: 
   - `*--`: Embedded relationships (UML composition with diamond)
   - `--> : fieldName (ref)`: ID reference relationships
@@ -520,13 +525,54 @@ interface MermaidOptions {
   entityName?: string;
   includeValidation?: boolean;
   includeOptional?: boolean;
+  metadataRegistry?: z.core.$ZodRegistry<z.core.GlobalMeta>;
 }
 ```
 
 - **`diagramType`**: Choose between 'er', 'class', or 'flowchart'
 - **`entityName`**: Custom name for the top-level entity
-- **`includeValidation`**: Show field constraints and validation rules
-- **`includeOptional`**: Display optional field indicators
+- **`includeValidation`**: Show validation rules in ER attribute comments (default `true`). Type details and original field names remain visible when disabled.
+- **`includeOptional`**: Include optional fields (default `true`); set to `false` to omit them and their otherwise unused nested entities
+- **`metadataRegistry`**: Use a custom Zod metadata registry instead of `z.globalRegistry`.
+
+## Supported types and naming
+
+Requires Zod v4. Generated syntax is tested with Mermaid 11.12+.
+
+| Schema | Diagram representation |
+| --- | --- |
+| Strings, numbers, booleans, dates, bigint, symbol | Corresponding primitive type |
+| `null`, `undefined`, `void`, `any`, `unknown`, `never`, `nan`, `file` | Distinct named types |
+| Enums, `keyof`, literals (including multiple values) | Value types with ER value annotations |
+| Arrays, tuples with rest, records, maps, sets, promises | Readable compound types; ER comments carry complex type details |
+| Objects, object arrays, lazy object recursion | Shared entities and relationships |
+| Unions and intersections | Joined types with relationships to nested objects |
+| Discriminated unions | A base entity with subtype relationships |
+| Optional, nullable, default, prefault, catch, readonly, nonoptional | Unwrapped type; optional/nullable relationship handling |
+| Template literals | `string` |
+| Preprocessing and pipes | Explicit output schema |
+| Arbitrary transforms and custom schemas | `unknown`, because their result type cannot be inferred at runtime |
+
+A scalar or collection at the root is represented by an entity with a `value` field.
+Inspection does not run parsing callbacks, refinements, transforms, or default/catch factories.
+Recursive collections without an object entity use `unknown` at the recursive boundary.
+Relationships describe schema structure, rather than every runtime constraint on a union or collection.
+
+Entity labels use `entityName` metadata, then `title`, then `description`, then a field-derived
+name or the `entityName` option. `getEntityName()` returns this label without stripping spaces.
+The renderer assigns identifiers containing letters, digits, and underscores, prefixes unsafe
+or reserved names, and adds numeric suffixes on collisions. Reusing the same object schema
+reuses its entity; distinct schemas with the same label receive distinct identifiers.
+ID references resolve by label, so give their target schemas distinct names.
+
+ER attribute names have [stricter syntax than entity labels](https://mermaid.js.org/syntax/entityRelationshipDiagram.html#attributes).
+Invalid attribute names are normalized; their original names are retained in ER comments.
+Class properties use normalized names, and flowchart labels retain original field names.
+Quotes, newlines, and Mermaid syntax in labels are escaped before rendering.
+
+String lengths/formats/regexes, numeric bounds/multiples, collection sizes, literal values,
+and enum values appear as ER annotations. Arbitrary refinement functions are not interpreted.
+See the [Zod API reference](https://zod.dev/api) for the underlying schema semantics.
 
 ## Examples
 

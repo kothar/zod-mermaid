@@ -1,5 +1,9 @@
-import { globalRegistry, z } from 'zod';
+/** @module id-ref */
+import { globalRegistry } from 'zod';
+
+import type { z } from 'zod';
 import { getEntityName } from './entity';
+import { SchemaParseError } from './errors';
 
 /**
  * Creates a field that references another entity by ID, inferring the type from the referenced
@@ -12,6 +16,7 @@ import { getEntityName } from './entity';
  * @returns A Zod schema for the ID field with reference metadata, with the type inferred from
  * the referenced schema
  *
+ * @throws {SchemaParseError} If the schema is not an object or the ID field is missing.
  * @example
  * import { z } from 'zod';
  * import { idRef } from './id-ref';
@@ -24,29 +29,26 @@ import { getEntityName } from './entity';
  */
 export function idRef<
   T extends z.ZodObject<Record<string, z.ZodTypeAny>>,
-  K extends keyof z.infer<T> & string = 'id'
->(
-  schema: T,
-  idFieldName?: K,
-  entityName?: string,
-): T['shape'][K] {
+  K extends keyof z.infer<T> & string = 'id',
+>(schema: T, idFieldName?: K, entityName?: string): T['shape'][K] {
+  if (!schema || schema.def?.type !== 'object') {
+    throw new SchemaParseError('ID references require an object schema', schema);
+  }
   const { shape } = schema;
   const field = idFieldName ?? 'id';
 
-  if (!(field in shape)) {
-    throw new Error(`ID field '${field}' not found in schema`);
+  if (!Object.prototype.hasOwnProperty.call(shape, field)) {
+    throw new SchemaParseError(`ID field '${field}' not found in schema`);
   }
 
   // Get the ID field schema
   const idFieldSchema = shape[field];
   if (!idFieldSchema) {
-    throw new Error(`ID field '${field}' not found in schema`);
+    throw new SchemaParseError(`ID field '${field}' not found in schema`);
   }
 
   // Use the provided entity name or the schema description
-  const targetEntityName = entityName
-    || getEntityName(schema, globalRegistry)
-    || 'Entity';
+  const targetEntityName = entityName || getEntityName(schema, globalRegistry) || 'Entity';
 
   // Create a new schema with the same type and validation as the ID field
   const resultSchema = idFieldSchema.clone().meta({
