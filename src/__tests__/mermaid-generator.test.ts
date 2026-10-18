@@ -5,12 +5,14 @@ import { generateMermaidDiagram } from '../mermaid-generator';
 import { idRef } from '../id-ref';
 
 describe('Mermaid Generator', () => {
-  const mockSchema = z.object({
-    id: z.string(),
-    name: z.string(),
-    email: z.email(),
-    age: z.number().min(0).max(120),
-  }).describe('MockSchema');
+  const mockSchema = z
+    .object({
+      id: z.string(),
+      name: z.string(),
+      email: z.email(),
+      age: z.number().min(0).max(120),
+    })
+    .describe('MockSchema');
 
   describe('when generating ER diagrams', () => {
     it('should generate a valid ER diagram', () => {
@@ -148,25 +150,31 @@ describe('Mermaid Generator', () => {
 
   describe('ID References', () => {
     it('should generate relationships for ID references', () => {
-      const CustomerSchema = z.object({
-        id: z.string(),
-        name: z.string(),
-        email: z.email(),
-      }).describe('Customer');
+      const CustomerSchema = z
+        .object({
+          id: z.string(),
+          name: z.string(),
+          email: z.email(),
+        })
+        .describe('Customer');
 
-      const ProductSchema = z.object({
-        id: z.string(),
-        name: z.string(),
-        price: z.number().positive(),
-      }).describe('Product');
+      const ProductSchema = z
+        .object({
+          id: z.string(),
+          name: z.string(),
+          price: z.number().positive(),
+        })
+        .describe('Product');
 
-      const OrderSchema = z.object({
-        id: z.string(),
-        customerId: idRef(CustomerSchema),
-        productId: idRef(ProductSchema),
-        quantity: z.number().positive(),
-        orderDate: z.date(),
-      }).describe('Order');
+      const OrderSchema = z
+        .object({
+          id: z.string(),
+          customerId: idRef(CustomerSchema),
+          productId: idRef(ProductSchema),
+          quantity: z.number().positive(),
+          orderDate: z.date(),
+        })
+        .describe('Order');
 
       const diagram = generateMermaidDiagram(OrderSchema, { diagramType: 'er' });
 
@@ -185,18 +193,22 @@ describe('Mermaid Generator', () => {
     });
 
     it('should work with optional ID references', () => {
-      const UserSchema = z.object({
-        id: z.string(),
-        name: z.string(),
-      }).describe('User');
+      const UserSchema = z
+        .object({
+          id: z.string(),
+          name: z.string(),
+        })
+        .describe('User');
 
-      const PostSchema = z.object({
-        id: z.string(),
-        title: z.string(),
-        content: z.string(),
-        authorId: idRef(UserSchema),
-        editorId: idRef(UserSchema).optional(),
-      }).describe('Post');
+      const PostSchema = z
+        .object({
+          id: z.string(),
+          title: z.string(),
+          content: z.string(),
+          authorId: idRef(UserSchema),
+          editorId: idRef(UserSchema).optional(),
+        })
+        .describe('Post');
 
       const diagram = generateMermaidDiagram(PostSchema, { diagramType: 'er' });
 
@@ -206,27 +218,33 @@ describe('Mermaid Generator', () => {
 
       // Should generate relationships with reference style and correct cardinality
       expect(diagram).toContain('Post }o--|| User : "authorId"');
-      expect(diagram).toContain('Post }o--o{ User : "editorId"');
+      expect(diagram).toContain('Post }o--o| User : "editorId"');
     });
 
     it('should work with arrays of ID references', () => {
-      const UserSchema = z.object({
-        id: z.string(),
-        name: z.string(),
-      }).describe('User');
+      const UserSchema = z
+        .object({
+          id: z.string(),
+          name: z.string(),
+        })
+        .describe('User');
 
-      const ProductSchema = z.object({
-        id: z.string(),
-        name: z.string(),
-        price: z.number().positive(),
-      }).describe('Product');
+      const ProductSchema = z
+        .object({
+          id: z.string(),
+          name: z.string(),
+          price: z.number().positive(),
+        })
+        .describe('Product');
 
-      const OrderSchema = z.object({
-        id: z.string(),
-        customerId: idRef(UserSchema),
-        productIds: z.array(idRef(ProductSchema)),
-        quantity: z.number().positive(),
-      }).describe('Order');
+      const OrderSchema = z
+        .object({
+          id: z.string(),
+          customerId: idRef(UserSchema),
+          productIds: z.array(idRef(ProductSchema)),
+          quantity: z.number().positive(),
+        })
+        .describe('Order');
 
       const diagram = generateMermaidDiagram(OrderSchema, { diagramType: 'er' });
 
@@ -242,26 +260,32 @@ describe('Mermaid Generator', () => {
 
   describe('multiple schemas', () => {
     it('should generate diagrams from an array of schemas', () => {
-      const UserSchema = z.object({
-        id: z.string(),
-        name: z.string(),
-        email: z.email(),
-      }).describe('User');
+      const UserSchema = z
+        .object({
+          id: z.string(),
+          name: z.string(),
+          email: z.email(),
+        })
+        .describe('User');
 
-      const ProductSchema = z.object({
-        id: z.string(),
-        name: z.string(),
-        price: z.number().positive(),
-        category: z.enum(['electronics', 'clothing', 'books']),
-      }).describe('Product');
+      const ProductSchema = z
+        .object({
+          id: z.string(),
+          name: z.string(),
+          price: z.number().positive(),
+          category: z.enum(['electronics', 'clothing', 'books']),
+        })
+        .describe('Product');
 
-      const OrderSchema = z.object({
-        id: z.string(),
-        customerId: idRef(UserSchema),
-        productId: idRef(ProductSchema),
-        quantity: z.number().positive(),
-        orderDate: z.date(),
-      }).describe('Order');
+      const OrderSchema = z
+        .object({
+          id: z.string(),
+          customerId: idRef(UserSchema),
+          productId: idRef(ProductSchema),
+          quantity: z.number().positive(),
+          orderDate: z.date(),
+        })
+        .describe('Order');
 
       const schemas = [UserSchema, ProductSchema, OrderSchema];
       const diagram = generateMermaidDiagram(schemas, { diagramType: 'er' });
@@ -277,11 +301,13 @@ describe('Mermaid Generator', () => {
     });
 
     it('should handle single schema the same as before', () => {
-      const UserSchema = z.object({
-        id: z.uuid(),
-        name: z.string(),
-        email: z.email(),
-      }).describe('User');
+      const UserSchema = z
+        .object({
+          id: z.uuid(),
+          name: z.string(),
+          email: z.email(),
+        })
+        .describe('User');
 
       const singleResult = generateMermaidDiagram(UserSchema, { diagramType: 'er' });
       const arrayResult = generateMermaidDiagram([UserSchema], { diagramType: 'er' });
@@ -292,17 +318,21 @@ describe('Mermaid Generator', () => {
     });
 
     it('should combine entities from multiple schemas without duplicates', () => {
-      const UserSchema = z.object({
-        id: z.uuid(),
-        name: z.string(),
-        email: z.email(),
-      }).describe('User');
+      const UserSchema = z
+        .object({
+          id: z.uuid(),
+          name: z.string(),
+          email: z.email(),
+        })
+        .describe('User');
 
-      const UserProfileSchema = z.object({
-        userId: idRef(UserSchema),
-        bio: z.string().optional(),
-        avatar: z.url().optional(),
-      }).describe('UserProfile');
+      const UserProfileSchema = z
+        .object({
+          userId: idRef(UserSchema),
+          bio: z.string().optional(),
+          avatar: z.url().optional(),
+        })
+        .describe('UserProfile');
 
       const schemas = [UserSchema, UserProfileSchema];
       const diagram = generateMermaidDiagram(schemas, { diagramType: 'er' });
@@ -323,16 +353,20 @@ describe('Mermaid Generator', () => {
     });
 
     it('should work with all diagram types for multiple schemas', () => {
-      const UserSchema = z.object({
-        id: z.uuid(),
-        name: z.string(),
-      }).describe('User');
+      const UserSchema = z
+        .object({
+          id: z.uuid(),
+          name: z.string(),
+        })
+        .describe('User');
 
-      const ProductSchema = z.object({
-        id: z.uuid(),
-        name: z.string(),
-        price: z.number().positive(),
-      }).describe('Product');
+      const ProductSchema = z
+        .object({
+          id: z.uuid(),
+          name: z.string(),
+          price: z.number().positive(),
+        })
+        .describe('Product');
 
       const schemas = [UserSchema, ProductSchema];
 
@@ -365,19 +399,25 @@ describe('Mermaid Generator', () => {
 
   describe('when generating diagrams with discriminated unions', () => {
     it('should use .describe() for naming union member entities', () => {
-      const ResultSchema = z.discriminatedUnion('status', [
-        z.object({
-          status: z.literal('success'),
-          data: z.string(),
-        }).describe('SuccessResult'),
-        z.object({
-          status: z.literal('error'),
-          errorMessage: z.string(),
-        }).describe('ErrorResult'),
-      ]).describe('Result');
+      const ResultSchema = z
+        .discriminatedUnion('status', [
+          z
+            .object({
+              status: z.literal('success'),
+              data: z.string(),
+            })
+            .describe('SuccessResult'),
+          z
+            .object({
+              status: z.literal('error'),
+              errorMessage: z.string(),
+            })
+            .describe('ErrorResult'),
+        ])
+        .describe('Result');
 
       const erDiagram = generateMermaidDiagram(ResultSchema, { diagramType: 'er' });
-      
+
       // Should use the provided descriptions for entity names
       expect(erDiagram).toContain('Result {');
       expect(erDiagram).toContain('SuccessResult {');
@@ -386,7 +426,7 @@ describe('Mermaid Generator', () => {
       expect(erDiagram).toContain('Result ||--|| ErrorResult : "error"');
 
       const classDiagram = generateMermaidDiagram(ResultSchema, { diagramType: 'class' });
-      
+
       // Should use the provided descriptions in class diagrams too
       expect(classDiagram).toContain('class Result {');
       expect(classDiagram).toContain('class SuccessResult {');
@@ -396,19 +436,25 @@ describe('Mermaid Generator', () => {
     });
 
     it('should use .meta({title}) for naming union member entities', () => {
-      const ResultSchema = z.discriminatedUnion('type', [
-        z.object({
-          type: z.literal('ok'),
-          value: z.number(),
-        }).meta({ title: 'OkResponse' }),
-        z.object({
-          type: z.literal('err'),
-          error: z.string(),
-        }).meta({ title: 'ErrResponse' }),
-      ]).meta({ title: 'Response' });
+      const ResultSchema = z
+        .discriminatedUnion('type', [
+          z
+            .object({
+              type: z.literal('ok'),
+              value: z.number(),
+            })
+            .meta({ title: 'OkResponse' }),
+          z
+            .object({
+              type: z.literal('err'),
+              error: z.string(),
+            })
+            .meta({ title: 'ErrResponse' }),
+        ])
+        .meta({ title: 'Response' });
 
       const erDiagram = generateMermaidDiagram(ResultSchema, { diagramType: 'er' });
-      
+
       // Should use the provided meta titles for entity names
       expect(erDiagram).toContain('Response {');
       expect(erDiagram).toContain('OkResponse {');
@@ -418,19 +464,21 @@ describe('Mermaid Generator', () => {
     });
 
     it('should fall back to generated names when no description or title is provided', () => {
-      const ResultSchema = z.discriminatedUnion('status', [
-        z.object({
-          status: z.literal('success'),
-          data: z.string(),
-        }),
-        z.object({
-          status: z.literal('error'),
-          errorMessage: z.string(),
-        }),
-      ]).describe('Result');
+      const ResultSchema = z
+        .discriminatedUnion('status', [
+          z.object({
+            status: z.literal('success'),
+            data: z.string(),
+          }),
+          z.object({
+            status: z.literal('error'),
+            errorMessage: z.string(),
+          }),
+        ])
+        .describe('Result');
 
       const erDiagram = generateMermaidDiagram(ResultSchema, { diagramType: 'er' });
-      
+
       // Should fall back to generated names like Result_success and Result_error
       expect(erDiagram).toContain('Result {');
       expect(erDiagram).toContain('Result_success {');

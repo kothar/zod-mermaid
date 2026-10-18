@@ -25,7 +25,7 @@ module.exports = [
     rules: {
       // TypeScript specific rules
       '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_', varsIgnorePattern: '^_', ignoreRestSiblings: true }],
-      '@typescript-eslint/no-explicit-any': 'off',
+      '@typescript-eslint/no-explicit-any': 'error',
       '@typescript-eslint/no-non-null-assertion': 'warn',
       '@typescript-eslint/ban-ts-comment': 'error',
 
@@ -56,7 +56,7 @@ module.exports = [
       'prefer-template': 'error',
       'prefer-arrow-callback': 'error',
       'arrow-body-style': ['error', 'as-needed'],
-      'no-duplicate-imports': 'warn',
+      'no-duplicate-imports': ['warn', { allowSeparateTypeImports: true }],
       'no-useless-rename': 'error',
       'prefer-destructuring': 'error',
       'no-useless-constructor': 'error',
@@ -116,6 +116,7 @@ module.exports = [
       },
     },
   },
+  require('eslint-config-prettier'),
   {
     ignores: ['dist/', 'node_modules/', '*.js', 'src/__tests__/'],
   },

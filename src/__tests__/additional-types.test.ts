@@ -4,20 +4,22 @@ import { generateMermaidDiagram } from '../mermaid-generator';
 import { validateMermaidSyntax } from './mermaid-validator';
 
 describe('Additional Zod types rendering', () => {
-  const AdditionalTypesSchema = z.object({
-    big: z.bigint(),
-    sym: z.symbol(),
-    nul: z.null(),
-    und: z.undefined(),
-    tup: z.tuple([z.string(), z.number(), z.boolean()]),
-    map: z.map(z.string(), z.number()),
-    set: z.set(z.string()),
-    prom: z.promise(z.number()),
-    rec: z.record(z.string(), z.number()),
-    inter: z.string().and(z.number()),
-    union: z.union([z.string(), z.number()]),
-    key: z.keyof(z.object({ foo: z.string(), bar: z.number() })),
-  }).describe('AdditionalTypes');
+  const AdditionalTypesSchema = z
+    .object({
+      big: z.bigint(),
+      sym: z.symbol(),
+      nul: z.null(),
+      und: z.undefined(),
+      tup: z.tuple([z.string(), z.number(), z.boolean()]),
+      map: z.map(z.string(), z.number()),
+      set: z.set(z.string()),
+      prom: z.promise(z.number()),
+      rec: z.record(z.string(), z.number()),
+      inter: z.string().and(z.number()),
+      union: z.union([z.string(), z.number()]),
+      key: z.keyof(z.object({ foo: z.string(), bar: z.number() })),
+    })
+    .describe('AdditionalTypes');
 
   it('should render additional types in class diagram', async () => {
     const classDiagram = generateMermaidDiagram(AdditionalTypesSchema, { diagramType: 'class' });
@@ -33,13 +35,13 @@ describe('Additional Zod types rendering', () => {
 
     // Composite/generic types
     expect(classDiagram).toContain('+tup: [string, number, boolean]');
-    expect(classDiagram).toContain('+map: Map<string, number>');
-    expect(classDiagram).toContain('+set: Set<string>');
-    expect(classDiagram).toContain('+prom: Promise<number>');
-    expect(classDiagram).toContain('+rec: Record<string, number>');
+    expect(classDiagram).toContain('+map: Map&lt;string, number&gt;');
+    expect(classDiagram).toContain('+set: Set&lt;string&gt;');
+    expect(classDiagram).toContain('+prom: Promise&lt;number&gt;');
+    expect(classDiagram).toContain('+rec: Record&lt;string, number&gt;');
 
     // Operators/types
-    expect(classDiagram).toContain('+inter: string & number');
+    expect(classDiagram).toContain('+inter: string &amp; number');
     expect(classDiagram).toContain('+union: string | number');
 
     await validateMermaidSyntax(classDiagram);
