@@ -79,6 +79,7 @@ function render(entities: ParsedEntity[], options: Required<MermaidOptions>): st
       lines.push(`    ${declaration} {`);
     }
     const fieldNames = new Set<string>();
+    const originalNames: string[] = [];
     for (const field of entity.fields) {
       const fieldName = allocateName(field.name, fieldNames, true);
       if (diagramType === 'er') {
@@ -92,6 +93,11 @@ function render(entities: ParsedEntity[], options: Required<MermaidOptions>): st
         const comment = annotations.length ? ` "${escapeLabel(annotations.join(', '))}"` : '';
         lines.push(`        ${type.type} ${fieldName}${comment}`);
       } else if (diagramType === 'class') {
+        if (fieldName !== field.name) {
+          // Mermaid's Markdown renderer consumes escapes, so protect JSON backslashes twice.
+          const rawName = JSON.stringify(field.name).replace(/\\/g, '\\\\');
+          originalNames.push(escapeLabel(`${fieldName}: ${rawName}`));
+        }
         lines.push(`        +${fieldName}: ${escapeLabel(field.type)}`);
       } else {
         const node = allocateName(`${name}_${field.name}`, nodeNames);
@@ -106,6 +112,11 @@ function render(entities: ParsedEntity[], options: Required<MermaidOptions>): st
       }
     }
     if (diagramType !== 'flowchart') lines.push('    }');
+    if (originalNames.length) {
+      lines.push(
+        `    note for ${name} "<b>Raw identifiers</b><br/>${originalNames.join('<br/>')}"`,
+      );
+    }
   }
   for (const entity of entities) {
     if (diagramType !== 'flowchart') {
