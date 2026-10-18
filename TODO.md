@@ -20,11 +20,11 @@
 - Nested discriminated unions retain intermediate unions and all leaf variants.
 - ID references resolve by schema identity, including identically labelled targets.
 - Per-target ER/class cardinalities for unions, tuples, nested collections, and ID references.
+- Reproducible wide-schema, shared-graph, label-collision, and recursive-depth benchmarks.
 
 ## Follow-up opportunities
 
 - Add SVG/browser rendering checks alongside parser tests.
-- Benchmark very large schemas and deeply nested recursive collections.
 
 Arbitrary transforms and custom refinements cannot be inferred through static inspection;
 the generator intentionally does not execute user parsing callbacks.
