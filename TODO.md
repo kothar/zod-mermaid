@@ -10,7 +10,7 @@
 - `includeOptional` filtering and custom metadata registries.
 - Zod v4 primitives, collections, unions, intersections, template literals, files, and wrappers.
 - Actual Zod v4 validation checks, including zero bounds and exclusive bounds.
-- File minimum/maximum size annotations (in bytes), including zero bounds.
+- File minimum/maximum size annotations (in bytes), including zero bounds and MIME constraints.
 - Separate typed schema parsing and diagram rendering; no production `any` casts.
 - Consistent formatting and lint configuration.
 
@@ -18,7 +18,7 @@
 
 - Render template-literal patterns in addition to their string type.
 - Render function argument and return types.
-- Render file MIME-type constraints; file size bounds are already supported.
+
 - Support nested discriminated-union variants.
 - Per-target cardinalities for mixed unions and nested collections.
 - Resolve ID references by schema identity, including identically labelled targets.
